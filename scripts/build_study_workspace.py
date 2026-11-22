@@ -200,7 +200,16 @@ def _publication_path(root: Path, relative: str, *, directory: bool = False) -> 
 def write_atomic(path: Path, raw: bytes, *, publication_root: Path | None = None) -> None:
     def check():
         if publication_root is not None:
-            _publication_path(publication_root, path.relative_to(publication_root / "data/study").as_posix())
+            root = Path(publication_root).resolve()
+            namespace = (root / "data/study").resolve()
+            target = Path(path).resolve(strict=False)
+            import os
+            target_value = os.path.normcase(str(target))
+            namespace_value = os.path.normcase(str(namespace))
+            if os.path.commonpath((target_value, namespace_value)) != namespace_value:
+                raise ValueError("path escapes real publication namespace")
+            relative = target.relative_to(namespace).as_posix()
+            _publication_path(root, relative)
 
     check()
     path.parent.mkdir(parents=True, exist_ok=True)

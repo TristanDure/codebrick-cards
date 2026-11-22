@@ -68,6 +68,12 @@ class PrepareWorkspaceTests(unittest.TestCase):
         (self.root / "data/articles.json").write_text("{broken", encoding="utf-8")
         self.assertEqual(self.main(), 1)
 
+    def test_cache_path_allows_normalized_windows_long_short_path_forms(self):
+        if self.root.drive != Path(tempfile.gettempdir()).resolve().drive:
+            self.skipTest("temp and fixture must share a drive")
+        self.fixture()
+        self.assertIsNone(prepare.check_cache(self.root))
+
     def test_missing_html_and_escaping_cache_are_rejected(self):
         self.fixture()
         (self.root / ".cache/source.html").unlink()

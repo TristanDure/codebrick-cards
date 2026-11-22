@@ -62,6 +62,7 @@ def build_command(root: Path, curated_files: list[str] | None = None) -> list[st
 
 
 def prepare_demo(root: Path) -> int:
+    root = Path(root).resolve()
     index = root / "data/study/index.json"
     if index.exists() or index.is_symlink():
         raise ValueError(f"Demo refuses to overwrite {index}. Use --demo in a different clean clone to preserve your study workspace and progress.")
