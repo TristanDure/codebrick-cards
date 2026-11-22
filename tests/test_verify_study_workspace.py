@@ -14,9 +14,10 @@ class VerifyWorkspaceTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.base = self.root / 'data/study'
         self.base.mkdir(parents=True)
-        self.raw = b'{"article":{"id":"demo"}}'
+        self.raw = json.dumps({"contentApproved": False, "article": {"id": "demo", "summary": {"approvedCards": 0}}, "atomicCandidates": [], "curated": []}, separators=(",", ":")).encode()
         (self.base / 'demo.json').write_bytes(self.raw)
-        self.index = {'schema': 'codebrick-article-workspace', 'summary': {'articles': 1},
+        self.index = {'schema': 'codebrick-article-workspace', 'contentApproved': False,
+                      'summary': {'articles': 1, 'approvedCards': 0},
                       'articles': [{'id': 'demo', 'file': 'demo.json', 'bytes': len(self.raw),
                                     'sha256': hashlib.sha256(self.raw).hexdigest()}]}
 
@@ -30,6 +31,62 @@ class VerifyWorkspaceTests(unittest.TestCase):
     def test_tampered(self):
         (self.base / 'demo.json').write_bytes(b'corrupt')
         with self.assertRaisesRegex(ValueError, 'integrity'):
+            self.check()
+
+    def test_rejects_forged_approval_claim(self):
+        self.index["contentApproved"] = True
+        self.index["summary"]["approvedCards"] = 1
+        with self.assertRaisesRegex(ValueError, "approval|approved"):
+            self.check()
+
+    def test_rejects_shard_identity_mismatch(self):
+        shard = json.loads(self.raw)
+        shard["article"]["id"] = "other"
+        self.raw = json.dumps(shard, separators=(",", ":")).encode()
+        (self.base / "demo.json").write_bytes(self.raw)
+        self.index["articles"][0]["bytes"] = len(self.raw)
+        self.index["articles"][0]["sha256"] = hashlib.sha256(self.raw).hexdigest()
+        with self.assertRaisesRegex(ValueError, "identity"):
+            self.check()
+
+    def test_rejects_approved_shard_or_candidate_claim(self):
+        shard = json.loads(self.raw)
+        shard["contentApproved"] = True
+        self.raw = json.dumps(shard, separators=(",", ":")).encode()
+        (self.base / "demo.json").write_bytes(self.raw)
+        self.index["articles"][0]["bytes"] = len(self.raw)
+        self.index["articles"][0]["sha256"] = hashlib.sha256(self.raw).hexdigest()
+        with self.assertRaisesRegex(ValueError, "approval|approved"):
+            self.check()
+
+    def test_rejects_approved_curated_candidate_status(self):
+        shard = json.loads(self.raw)
+        shard["curated"] = [{"cards": [{"id": "card-1", "status": "approved"}]}]
+        self.raw = json.dumps(shard, separators=(",", ":")).encode()
+        (self.base / "demo.json").write_bytes(self.raw)
+        self.index["articles"][0]["bytes"] = len(self.raw)
+        self.index["articles"][0]["sha256"] = hashlib.sha256(self.raw).hexdigest()
+        with self.assertRaisesRegex(ValueError, "approved status"):
+            self.check()
+
+    def test_rejects_approved_candidate_status(self):
+        shard = json.loads(self.raw)
+        shard["atomicCandidates"] = [{"id": "card-1", "status": "approved"}]
+        self.raw = json.dumps(shard, separators=(",", ":")).encode()
+        (self.base / "demo.json").write_bytes(self.raw)
+        self.index["articles"][0]["bytes"] = len(self.raw)
+        self.index["articles"][0]["sha256"] = hashlib.sha256(self.raw).hexdigest()
+        with self.assertRaisesRegex(ValueError, "approved status"):
+            self.check()
+
+    def test_rejects_nonzero_article_approved_count(self):
+        shard = json.loads(self.raw)
+        shard["article"]["summary"]["approvedCards"] = 1
+        self.raw = json.dumps(shard, separators=(",", ":")).encode()
+        (self.base / "demo.json").write_bytes(self.raw)
+        self.index["articles"][0]["bytes"] = len(self.raw)
+        self.index["articles"][0]["sha256"] = hashlib.sha256(self.raw).hexdigest()
+        with self.assertRaisesRegex(ValueError, "approval|approved"):
             self.check()
 
     def test_path_escape(self):

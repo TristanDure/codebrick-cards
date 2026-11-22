@@ -131,7 +131,9 @@ class PrepareWorkspaceTests(unittest.TestCase):
 
     def test_real_demo_publishes_four_original_subjects_without_source_data(self):
         before = self.sentinel_files()
-        self.assertEqual(self.main("--demo"), 0, self.stderr.getvalue())
+        with contextlib.redirect_stdout(io.StringIO()):
+            result = prepare.prepare_demo(self.root)
+        self.assertEqual(result, 0, self.stderr.getvalue())
         index = json.loads((self.root / "data/study/index.json").read_bytes())
         self.assertEqual(index["summary"]["articles"], 4)
         self.assertFalse(index["contentApproved"])
@@ -145,6 +147,8 @@ class PrepareWorkspaceTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), raw)
         self.assertFalse((self.root / "data/articles.json").exists())
         self.assertFalse((self.root / ".cache").exists())
+        self.assertGreaterEqual(index["summary"]["atomicCandidates"], 4)
+        self.assertTrue(all(shard["atomicCandidates"] for shard in shards))
         published = (self.root / "data/study/index.json").read_bytes()
         self.assertEqual(self.main("--demo"), 1)
         self.assertEqual((self.root / "data/study/index.json").read_bytes(), published)
