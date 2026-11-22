@@ -1,0 +1,27 @@
+# Local source snapshots, generated content and personal study records
+.cache/
+_backups/
+exports/
+data/*
+!data/README.md
+!data/demo/
+# Demo dataset is hand-authored and deliberately tiny.
+!data/demo/**
+README.local.md
+# Environments and build products
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.tmp
+node_modules/
+coverage/
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.vscode/
+.idea/

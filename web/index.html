@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111814" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="A focused reading-notes and flashcard workspace.">
+  <title>Codebrick Cards</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+      <a class="brand" href="#today" aria-label="Codebrick Cards home" data-view="today">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <span class="brand-name">codebrick<span class="brand-light">cards</span></span>
+      </a>
+
+      <div class="workspace-label">YOUR WORKSPACE</div>
+      <a class="nav-item" href="workbench.html">全站文章卡片工作台 ↗</a>
+      <nav class="primary-nav" aria-label="Workspace">
+        <button class="nav-link is-active" type="button" data-view="today">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span>Today</span><span class="nav-count" id="todayNavCount">-</span>
+        </button>
+        <button class="nav-link" type="button" data-view="library">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20M8 7h8M8 10h6"/></svg>
+          <span>Library</span><span class="nav-count" id="libraryNavCount">-</span>
+        </button>
+        <button class="nav-link" type="button" data-view="inbox">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 13h4l1.5 3h5L16 13h4"/><path d="M12 4v7m-3-3 3 3 3-3"/></svg>
+          <span>Inbox</span><span class="nav-count" id="inboxNavCount">-</span>
+        </button>
+        <button class="nav-link" type="button" data-view="unitReview">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h5m-5 4h3"/><path d="m15 15 1.5 1.5L20 13"/></svg>
+          <span>知识单元审核</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-divider"></div>
+      <div class="workspace-label">YOUR DATA</div>
+      <button class="nav-link utility-link" type="button" data-action="import">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16V4m-4 4 4-4 4 4"/><path d="M5 13v6h14v-6"/></svg>
+        <span>Import cards</span>
+      </button>
+      <button class="nav-link utility-link" type="button" data-action="export">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v12m4-4-4 4-4-4"/><path d="M5 14v6h14v-6"/></svg>
+        <span>Export backup</span>
+      </button>
+
+      <div class="sidebar-bottom">
+        <div class="storage-card">
+          <span class="storage-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/><path d="M8 9h8m-8 3h8m-8 3h5"/></svg></span>
+          <span><strong>Saved on this device</strong><small id="storageStatus">Loading your cards...</small></span>
+          <span class="status-dot" aria-hidden="true"></span>
+        </div>
+        <div class="profile-row"><span class="avatar" aria-hidden="true">C</span><span class="profile-copy"><strong>Your study space</strong><small>Personal library</small></span><span class="profile-more" aria-hidden="true">...</span></div>
+      </div>
+    </aside>
+
+    <main class="main-area" id="mainArea">
+      <header class="topbar">
+        <button class="mobile-menu-button" id="mobileMenuButton" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="topbar-context"><span class="context-dot"></span><span>Personal workspace</span><span class="context-chevron" aria-hidden="true">/</span><strong id="contextPage">Today</strong></div>
+        <div class="topbar-actions">
+          <label class="search-field" for="globalSearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg><input id="globalSearch" type="search" placeholder="Search your cards..." autocomplete="off"><kbd>Ctrl K</kbd></label>
+          <button class="icon-button top-import" type="button" data-action="import" aria-label="Import cards" title="Import cards"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-4 4 4-4 4 4"/><path d="M5 13v6h14v-6"/></svg></button>
+          <span class="top-avatar" aria-label="Your account">C</span>
+        </div>
+      </header>
+
+      <div class="content-wrap">
+        <div class="notice-bar is-hidden" id="noticeBar" role="status"></div>
+        <section class="page-intro" id="pageIntro" aria-live="polite"></section>
+        <section class="stats-grid" id="statsGrid" aria-label="Study overview"></section>
+        <section class="filter-row" id="filterRow" aria-label="Filter cards"></section>
+        <section id="viewContent" class="view-content" aria-live="polite"></section>
+        <footer class="page-footer"><span>Small steps, stronger recall.</span><span class="footer-dot"></span><span>Everything stays on this device</span></footer>
+      </div>
+    </main>
+  </div>
+
+  <input id="importFile" type="file" accept="application/json,.json" hidden>
+  <input id="unitReviewImportFile" type="file" accept="application/json,.json" hidden aria-label="导入知识单元审核台账">
+  <dialog class="modal" id="editDialog" aria-labelledby="editDialogTitle">
+    <form class="modal-card edit-form" id="editForm">
+      <div class="modal-heading"><div><p class="eyebrow" id="editEyebrow">INBOX CARD</p><h2 id="editDialogTitle">Edit card</h2></div><button class="icon-button modal-close" type="button" data-action="close-edit" aria-label="Close">x</button></div>
+      <input id="editCardId" type="hidden">
+      <label class="form-field"><span>Question</span><textarea id="editQuestion" name="question" rows="3" required maxlength="6000"></textarea></label>
+      <label class="form-field"><span>Answer</span><textarea id="editAnswer" name="answer" rows="4" required maxlength="10000"></textarea></label>
+      <label class="form-field"><span>Evidence <em>Optional</em></span><textarea id="editEvidence" name="evidence" rows="3" maxlength="6000" placeholder="A useful quote or supporting detail"></textarea></label>
+      <div class="form-grid"><label class="form-field"><span>Section</span><input id="editSection" name="section" maxlength="240" placeholder="e.g. Chapter 2"></label><label class="form-field"><span>Tags <em>Comma separated</em></span><input id="editTags" name="tags" maxlength="500" placeholder="design, research"></label></div>
+      <label id="sourceReviewConfirm" class="source-confirm is-hidden"><input id="sourceReviewChecked" type="checkbox"><span>I opened the original source and replaced the placeholder with verified content.</span></label><div class="modal-footer"><button class="button button-secondary" type="button" data-action="close-edit">Cancel</button><span class="spacer"></span><button class="button button-secondary" type="submit" name="submitMode" value="save">Save changes</button><button class="button button-primary" type="submit" name="submitMode" value="approve" id="saveApproveButton">Save &amp; approve <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button></div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="detailDialog" aria-labelledby="detailTitle"><article class="modal-card detail-card" id="detailBody"></article></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
+
