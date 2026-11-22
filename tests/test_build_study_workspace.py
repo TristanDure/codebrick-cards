@@ -336,6 +336,7 @@ class StudyWorkspaceTests(unittest.TestCase):
             builder.publish(root, result)
         self.assertFalse((root / "data/study").exists())
 
+    @unittest.skipIf(os.name == "nt", "Windows junction tests cover native reparse points")
     def test_symlink_lstat_mode_rejected_without_windows_attributes(self):
         root, _ = self.project()
         result = builder.build_workspace(root)
