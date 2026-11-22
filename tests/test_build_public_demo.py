@@ -11,6 +11,7 @@ class PublicDemoTests(unittest.TestCase):
         root = parent / 'root'
         root.mkdir()
         (root / 'web').mkdir()
+        (root / '.gitignore').write_text('data/*\n', encoding='utf-8')
         for name in ('workbench.html', 'workbench.js', 'workbench.css', 'workbench-progress.js'):
             (root / 'web' / name).write_text('fixture', encoding='utf-8')
         return root
@@ -32,6 +33,14 @@ class PublicDemoTests(unittest.TestCase):
             self.assertEqual(data['summary']['approvedCards'], 0)
             self.assertEqual({p.name for p in (site / 'web').iterdir()},
                              {'workbench.html', 'workbench.js', 'workbench.css', 'workbench-progress.js'})
+
+    def test_demo_builder_works_when_project_is_a_nested_temp_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            root = self.fixture(parent)
+            site = parent / 'sibling-site'
+            self.assertEqual(build(root, site), 0)
+            self.assertEqual(json.loads((site / 'data/study/index.json').read_bytes())['summary']['articles'], 4)
 
     def test_invalid_destination_leaves_root_untouched(self):
         with tempfile.TemporaryDirectory() as tmp:

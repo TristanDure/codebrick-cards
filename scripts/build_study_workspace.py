@@ -168,6 +168,7 @@ def build_workspace(root: Path = ROOT, candidate_report: dict | None = None, cur
 
 def _publication_path(root: Path, relative: str, *, directory: bool = False) -> Path:
     """Reject existing redirects, including Windows junctions, below the project root."""
+    root = Path(root).resolve()
     output = root / "data/study"
     value = Path(relative)
     if value.is_absolute() or value.drive or ".." in value.parts:
@@ -185,8 +186,12 @@ def _publication_path(root: Path, relative: str, *, directory: bool = False) -> 
             raise ValueError("refusing symlink/reparse component in publication namespace: " + str(current))
         if (number < len(parts) - 1 or directory) and not stat.S_ISDIR(info.st_mode):
             raise ValueError("publication namespace component is not a directory: " + str(current))
-    if not path.resolve().is_relative_to(output):
-        raise ValueError("path escapes real publication namespace")
+    resolved_path = path.resolve()
+    try:
+        resolved_output = output.resolve()
+        resolved_path.relative_to(resolved_output)
+    except ValueError as exc:
+        raise ValueError("path escapes real publication namespace") from exc
     return path
 
 

@@ -15,6 +15,9 @@ def build(root: Path, site: Path) -> int:
     root, site = root.resolve(), site.resolve()
     if site == root or root in site.parents or site in root.parents:
         raise ValueError('Static site destination must be outside the project directory')
+    ignored_data = root / '.gitignore'
+    if not ignored_data.is_file() or 'data/*' not in ignored_data.read_text(encoding='utf-8-sig'):
+        raise ValueError('Refusing to build a demo in a root without the data/* local-data ignore rule')
     if site.exists() and (not site.is_dir() or any(site.iterdir())):
         raise ValueError(f'Site destination is not empty: {site}')
     for name in ASSETS:

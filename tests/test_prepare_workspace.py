@@ -147,6 +147,8 @@ class PrepareWorkspaceTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), raw)
         self.assertFalse((self.root / "data/articles.json").exists())
         self.assertFalse((self.root / ".cache").exists())
+        from scripts.verify_study_workspace import verify
+        self.assertEqual(verify(self.root), 4)
         self.assertGreaterEqual(index["summary"]["atomicCandidates"], 4)
         self.assertTrue(all(shard["atomicCandidates"] for shard in shards))
         published = (self.root / "data/study/index.json").read_bytes()

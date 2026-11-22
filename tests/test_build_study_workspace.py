@@ -44,6 +44,14 @@ class StudyWorkspaceTests(unittest.TestCase):
         self.assertFalse(shard["contentApproved"])
         self.assertFalse((root / "data/study").exists())
 
+    @unittest.skipUnless(Path.cwd().drive == Path(tempfile.gettempdir()).drive, "requires project and temp on same drive")
+    def test_publication_path_accepts_normalized_relative_project_root(self):
+        root, _ = self.project()
+        result = builder.build_workspace(root)
+        relative = Path(os.path.relpath(root, Path.cwd()))
+        self.assertEqual(builder.publish(relative, result), None)
+        self.assertTrue((root / "data/study/index.json").is_file())
+
     def test_published_checksums_and_versioned_paths_match_exact_bytes(self):
         root, _ = self.project()
         result = builder.build_workspace(root)
