@@ -186,10 +186,12 @@ def _publication_path(root: Path, relative: str, *, directory: bool = False) -> 
             raise ValueError("refusing symlink/reparse component in publication namespace: " + str(current))
         if (number < len(parts) - 1 or directory) and not stat.S_ISDIR(info.st_mode):
             raise ValueError("publication namespace component is not a directory: " + str(current))
-    resolved_path = path.resolve()
+    import os
+    resolved_path = os.path.normcase(str(path.resolve()))
+    resolved_output = os.path.normcase(str(output.resolve()))
     try:
-        resolved_output = output.resolve()
-        resolved_path.relative_to(resolved_output)
+        if os.path.commonpath((resolved_path, resolved_output)) != resolved_output:
+            raise ValueError("path escapes real publication namespace")
     except ValueError as exc:
         raise ValueError("path escapes real publication namespace") from exc
     return path
