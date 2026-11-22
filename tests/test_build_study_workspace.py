@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -347,7 +348,7 @@ class StudyWorkspaceTests(unittest.TestCase):
             with self.subTest(path=redirected.relative_to(root).as_posix()):
                 def lstat(path, *args, **kwargs):
                     if path == redirected:
-                        return os.stat_result((builder.stat.S_IFLNK | 0o777, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+                        return SimpleNamespace(st_mode=builder.stat.S_IFLNK | 0o777)
                     return original_lstat(path, *args, **kwargs)
                 with mock.patch.object(Path, "lstat", lstat):
                     with self.assertRaisesRegex(ValueError, "symlink/reparse"):
