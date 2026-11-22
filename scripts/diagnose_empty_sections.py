@@ -167,6 +167,8 @@ def _dynamic_evidence(nodes: list[Node], start: int, end: int) -> list[dict[str,
     seen: set[tuple[str, str]] = set()
     for node in nodes[start:end]:
         classes = [name for name in node.attrs.get("class", "").split() if name.startswith("algo-embed-")]
+        if "mermaid" in node.attrs.get("class", "").split():
+            classes.append("mermaid")
         if not classes and node.tag != "iframe":
             continue
         selector = "." + ".".join(classes) if classes else "iframe"
@@ -345,8 +347,8 @@ def build_report(coverage: dict, article_manifest: dict, cache_root: Path) -> di
             subtree_link_count = len(subtree_links)
             direct_dynamic = _dynamic_evidence(analysis["nodes"], direct_start, direct_end)
             subtree_dynamic = _dynamic_evidence(analysis["nodes"], direct_start, subtree_end)
-            direct_skeleton_count = sum(".algo-embed-skeleton" in item["selector"] for item in direct_dynamic)
-            subtree_skeleton_count = sum(".algo-embed-skeleton" in item["selector"] for item in subtree_dynamic)
+            direct_skeleton_count = sum(".algo-embed-skeleton" in item["selector"] or ".mermaid" in item["selector"] for item in direct_dynamic)
+            subtree_skeleton_count = sum(".algo-embed-skeleton" in item["selector"] or ".mermaid" in item["selector"] for item in subtree_dynamic)
             direct_iframe_count = sum(item["tag"] == "iframe" for item in direct_dynamic)
             subtree_iframe_count = sum(item["tag"] == "iframe" for item in subtree_dynamic)
             for index, candidate in analysis["headings"]:

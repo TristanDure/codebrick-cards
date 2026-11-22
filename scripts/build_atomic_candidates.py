@@ -9,6 +9,11 @@ from pathlib import Path
 from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 try:
+    from .co_pipeline_corrections import known_conflict
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from co_pipeline_corrections import known_conflict
+try:
     from scripts import sync_sources
 except ModuleNotFoundError as exc:
     # Direct execution puts scripts/ on sys.path rather than the project root.
@@ -284,6 +289,12 @@ def _formula(text: str) -> tuple[str, str] | None:
 def _unit(report: dict, source: dict, article: dict, section: dict, sec_i: int,
           unit: dict, previous: list[dict], raw_hash: str, parsed_hash: str) -> None:
     text, tag, uid = str(unit.get("text", "") or ""), str(unit.get("tag", "")).lower(), str(unit.get("id", ""))
+    if known_conflict(article.get("url", ""), unit):
+        why = "known-source-factual-conflict"
+        _backlog(report, source, article, section, sec_i, unit, why,
+                 "Known CO pipeline source erratum; use independently reviewed curated correction, not an unqualified generated fragment.")
+        _audit(report, unit, "backlog", why)
+        return
     if not text.strip():
         why = "empty-source-unit"; _backlog(report, source, article, section, sec_i, unit, why); _audit(report, unit, "backlog", why); return
     if tag == "table": return

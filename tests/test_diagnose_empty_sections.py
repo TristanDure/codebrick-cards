@@ -52,6 +52,16 @@ class EmptySectionTriageTests(unittest.TestCase):
         record["dynamicSkeletonCount"] = 1
         self.assertEqual(_category_for(record, None, []), "dynamic_component_static_skeleton")
 
+    def test_mermaid_diagram_is_detected_as_dynamic_evidence(self):
+        from scripts.diagnose_empty_sections import _dynamic_evidence
+
+        tree = Tree()
+        tree.feed('<div class="mermaid">graph TD; A-->B</div>')
+        nodes, _ = _flatten_with_parents(tree.root)
+        evidence = _dynamic_evidence(nodes, 0, len(nodes))
+        self.assertEqual(len(evidence), 1)
+        self.assertIn("mermaid", evidence[0]["selector"])
+
     def test_bad_integrity_and_same_level_component_are_conservative(self):
         record = self._base_record()
         record["recordIntegrity"] = "unresolved"

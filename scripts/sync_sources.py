@@ -5,6 +5,10 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+try:
+    from .co_pipeline_corrections import repair_summary_text
+except ImportError:
+    from co_pipeline_corrections import repair_summary_text
 
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = ROOT / '.cache' / 'html'
@@ -241,7 +245,7 @@ def make_cards(source,article,path,content_hash=None):
         base_id=stable_id(source['id'],path,sec['heading'],anchor)
         section_key=stable_id(source['id'],path,'section',anchor,str(sec['sectionIndex']),'' if anchor else sec['heading'])
         for part_index,chunk in enumerate(chunks,1):
-            answer=chunk['text']; unit_ids=chunk['knowledgeUnitIds']
+            answer=repair_summary_text(article['url'], chunk['text']); unit_ids=chunk['knowledgeUnitIds']
             card_id=base_id if part_index==1 else stable_id(source['id'],path,sec['heading'],anchor,f'part-{part_index}')
             suffix=f'（第 {part_index}/{len(chunks)} 部分）' if len(chunks)>1 else ''
             question=f'请解释「{sec["heading"]}」本部分的关键概念、条件、过程与结论。{suffix}'

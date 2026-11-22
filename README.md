@@ -31,6 +31,8 @@ python scripts/prepare_workspace.py --demo  # 四科原创演示；新克隆使�
 python scripts/prepare_workspace.py --sync  # 显式联网同步四科来源并构建
 python scripts/prepare_workspace.py          # 从本地完整缓存离线构建
 python scripts/verify_study_workspace.py    # 分片路径与SHA完整性检查
+python scripts/build_disposition_ledger.py --output-dir data/_reviews/mass-20261122/m2-accounting-next
+python scripts/verify_disposition_ledger.py --ledger data/_reviews/mass-20261122/m2-accounting-next/ledger.json
 ```
 
 同步耗时取决于来源与网络，失败会非零退出。缓存及生成分片存于本地 `data/` 和 `.cache/`，默认不纳入版本控制。来源更新或富内容提取缺失时，需要人工核对待查项。浏览器评分仅保存在当前浏览器的站点存储；换端口/设备前请通过界面备份。不要提交笔记、学习进度或备份。
@@ -44,4 +46,4 @@ node --test tests/test_workbench_progress.cjs
 
 CI 在 Windows 和 Linux 跑离线测试。贡献规范见 [CONTRIBUTING.md](CONTRIBUTING.md)。工具可用不代表知识覆盖完整：本地既有 348 篇目录、74 篇精编包、2,777 张候选曾记录为交付快照，但未获公开再分发授权且不随仓库发布；此前验收报告仍记录大量空章节、候选缺口和待复审来源单元。交付检查通过不代表全站 408/真题能力通过，不应作为唯一备考材料。评审规则保留在 `data/reports/acceptance-rubric-408.md` 的本地工作区资料中；公开版本的评审原则在贡献指南中说明。
 
-代码许可：[MIT](LICENSE)。第三方声明：[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+`build_disposition_ledger.py` 在新的本机忽略目录中生成逐文章、逐章节、逐来源单元及逐空提取项的哈希绑定处置快照；`verify_disposition_ledger.py` 可重核项目计数、输入哈希和逐项关系。该快照仅为机器证据分诊，不是人工批准，也不关闭尚未补证的知识内容。候选映射、结构校验、独立内容评审和人工源单元确认必须分别看待。详见[覆盖处置台账与验收边界](DISPOSITION_LEDGER.md)。代码许可：[MIT](LICENSE)。第三方声明：[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
