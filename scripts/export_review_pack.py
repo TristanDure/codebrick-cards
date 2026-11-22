@@ -632,7 +632,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             _validate_output_path(root, args.output)
             result["notice"] = "dry-run：未写入文件。显式传入 --apply 才会写入。"
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        print(json.dumps(result, ensure_ascii=True, indent=2))
         return 0
     except (ReviewPackError, OSError) as exc:
         print(f"导出拒绝：{exc}", file=sys.stderr)
