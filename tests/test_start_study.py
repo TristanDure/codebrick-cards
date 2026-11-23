@@ -123,8 +123,13 @@ class StartStudyTests(unittest.TestCase):
         return ("function Open-StudyBrowser { param($Url)\n"
                 + " $seenHash = Get-StudyHttpIndexHash -Url "
                 + ps_quote(f"http://127.0.0.1:{self.port}/data/study/index.json") + "\n"
-                + " [pscustomobject]@{url=$Url; indexHash=$seenHash} | ConvertTo-Json -Compress | "
-                + "Set-Content -LiteralPath " + ps_quote(self.marker) + " -Encoding UTF8\n}\n")
+                + " $json = [pscustomobject]@{url=$Url; indexHash=$seenHash} | ConvertTo-Json -Compress\n"
+                # Publish only after the writer has closed; exists() is not a
+                # completion signal for PowerShell Set-Content on Windows.
+                + " [IO.File]::WriteAllText(" + ps_quote(str(self.marker) + ".pending")
+                + ", $json, (New-Object Text.UTF8Encoding $false))\n"
+                + " [IO.File]::Move(" + ps_quote(str(self.marker) + ".pending")
+                + ", " + ps_quote(self.marker) + ")\n}\n")
 
     def start_ps(self, script=None, args=None):
         number = len(self.results)
