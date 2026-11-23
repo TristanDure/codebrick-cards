@@ -277,3 +277,24 @@ Peirce 两份报告的 `reviewer.threadId` 最初误写为父线程；已由实�
 **四篇候选作者返修完成，等待新哈希独立复审。**Zeno 在不覆盖旧版的情况下写入 `co-cisc-risc-r4.json`（18卡，SHA `519f7e44d12028743e28784f932fde344eaf6bdeda38205401afa63aea518732`）、`os-spooling-r3.json`（17卡，SHA `17ddf7ecac90682e78ba704f99a14ebad4331d0c98d3521c1cd61b79be74b1e2`）、`cn-ftp-dhcp-r2.json`（12卡，SHA `7fccdd2de1d7b5fd4d3742167f6d9de38e2375226e31588c184e7845c927c6da`）、`ds-ext-graph-is-tree-r2.json`（8卡，SHA `3cd4c34c0a06e4772195f41496135ff2af083cab19fe95b6050df582a26cfc8e`）。四篇结构/双向映射机器检查均通过，但所有卡都等待非作者独立评审；不得继承r1报告中的PASS。
 
 **M4 acquisition 更新。**高教社2027封面和书目页只加强年度/署名/ISBN书目证据；`evidence-2027-r13.json` 的审计仍为官方详细条目数、映射数与覆盖率 `null`，官方完整题文0、官方答案0、历年真题库存不完整、`full408Acceptance=false`。官方原卷入口仍未解决；不以考试培训摘要、书目或CodeBrick自称真题替代。
+
+### 持续执行增量：2026-11-24（r37 / M4时间出处更正）
+
+本轮使用项目当前锁定的目标年度 **2027招生年度**。该年度由已核验的高教出版社官方书目与封面元信息支持；详细官方大纲条文没有取得，因此`officialRequirements=null`、映射率`null`。审计仍计官方完整原题0、官方答案0；这不是对“未发布”的判断。2027是本项目目前可核验的最新官方年度，并非穷尽搜索保证。
+
+**新增内容评审与范围账。** 在r36（29/348篇、652 PASS/28 UNPROVEN）上，本轮按URL以新哈希版本替换：OS「SPOOLing」r4（17 PASS/0U/0F）；CN「FTP/DHCP」r2（10 PASS/1U/1F）；DS「树与图」r2（7 PASS/1U/0F）。新候选均由非作者子代理完成逐卡AI评审，候选/评审字节绑定后再经机器audit；归属为评审记录声明，不是密码学身份认证或人工批准。r37为 **29/348篇评审候选版本、664 PASS、15 UNPROVEN、1 FAIL、319篇批外**。对应范围快照 `m3-scope-snapshot-r30.json`：OS 6/81（137P）、CO 9/72（197P/6U）、CN 7/62（170P/1U/1F）、DS 7/133（160P/8U）；活跃来源单元总计34,476。只列候选评审版本映射账，不代表最新作者版本必已评，也不代表全文覆盖；大量未映射/非卡处置单元、空节、练习与富内容仍有缺口。
+
+CN FTP/DHCP r2的FAIL卡`curated-ccacdcac4a45c3cb`将FTP会话状态、传输模式和安全性揉成多目标；UNPROVEN卡`curated-af7af8f3f5ff45c7`把站内自称2026大纲目录归属写成未经官方正文证实的事实。DS图树r2另有1张sourceMapping UNPROVEN。已派原作者侧代理逐项修订；旧候选和失败报告保留，修订后必须由非作者针对全新哈希复评，之前PASS不继承。CO ALU r2（19卡）与DS C函数控制流r2（32卡）作者返修已落盘、结构检查通过，但尚未进入r37，因为尚无新独立复评；等待评委。CO CISC/RISC r5的独立复评进行中。
+
+**评审工具与回归。** 新增只读`build_content_scope_snapshot.py`，从新鲜批次audit生成逐文章覆盖/批外范围，校验哈希漂移且拒绝覆盖；9项定向单测通过。全量Python测试实际运行399项（387通过、12跳过、0失败），Node 17/17通过，`git diff --check`通过。这些是工具测试，不是内容审批；该新增范围生成器仍未做独立代码评审。
+
+**M4时间元数据更正。** 历史`evidence-2027-r13.json`与`m4-official-acquisition-r15.json`中的`verifiedAt/reviewedAt`和r15封面`captureAt`曾被写为估计时间；现有机器审计生成时间早于所写capture/review时间，故不应将这些时间当成capture telemetry。原始字节和旧审计均保留，新增`m4-timestamp-provenance-correction-r1.json`显式撤回三个精确时间、哈希绑定原文件，并生成`evidence-2027-r14.json`及`m4-evidence-audit-r21.json`。新manifest的`verifiedAt`仅指当前本地字节复核，不替代原始采集时间。该更正未增加官方条文或题证据，年度条款数仍null、官方题文/答案仍0，全文408仍未接受。
+
+
+**r38：CISC/RISC r5复评已完成。** Peirce对18卡重新做四维独立AI复评，18 PASS/0U/0F；验证批次和来源哈希机器重核后按URL替换r4，得到`m3-four-subjects-cumulative-r38.json`及audit、`m3-scope-snapshot-r31.json`。累计 **29/348篇、667 PASS、12 UNPROVEN、1 FAIL、319篇批外**；四科OS 137P、CO 200P/3U、CN 170P/1U/1F、DS 160P/8U。CISC/RISC文章105来源单元中63个无卡映射，2个空节及富内容、官方考纲/真题证据仍未闭环；creatorAuthoredExercises仍不在正式卡片复评/可导入范围。r37的“r5进行中”由此新记录替代；旧记录不覆盖。ALU/C函数控制流已正式派给非作者评委重审，尚未计入r38。公开README的作者候选库存也重新实数：93篇、144历史/当前版本、4,443卡面（包含同篇旧版，不是去重知识量）。
+
+**r40：持续验收更新。** Peirce对DS C函数控制流作者候选r2的32卡重审（26P/6U/0F），完整71来源单元/10节，20个未映射、40单元/9节列入review missing coverage；6张UNPROVEN均涉及本文未陈述的C语言规则，编译实验不能替代来源证据。ALU r2仍18P/1U/0F，完整复核140单元/15节，44个未映射、105单元/13节缺口；唯一UNPROVEN超出本文数据通路模型。作者已产出ALU r3并经结构检查，尚无新独立评审，故r40仍记r2。C函数r2已替换r1（r1 25P/7U→r2 26P/6U），绝不从PASS推广到全篇。r40仍29/348篇、671 PASS/9 UNPROVEN/1 FAIL、319篇批外；OS 137P、CO 203P/1U、CN 170P/1U/1F、DS 161P/7U。
+
+Zeno按精确代码哈希独立审查scope快照生成器和9项定向测试，未发现可复现缺陷；明确多篇跨科端到端、并发和Windows特定边界仍未覆盖，不是人工审批。
+
+**M4非官方题卷线索。** 厦门工学院备考栏目公开列有2009—2025题目及解析PDF。公开下载2009 PDF共7页，仅目视第1页标题/页脚和第6页45—47题/页脚；未完成整卷逐题核对，MarkItDown转换失败。因此r16只按`secondary`/`partial-text`入账，PDF SHA及目录DOM快照均绑定；高校托管不是命题机关身份，官方完整题文/答案计数仍0。`evidence-2027-r16.json`及`m4-evidence-audit-r23.json`结构审计通过；大纲正文未取得、条款映射null、库存不完整、full408Acceptance=false。中间r15因目录年份字段为null被审计拒绝，原件保留，r16加上“目录最新列示年份”的明确语义后通过；拒绝记录不是证据版本。
