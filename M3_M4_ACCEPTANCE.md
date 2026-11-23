@@ -267,3 +267,13 @@ Peirce 两份报告的 `reviewer.threadId` 最初误写为父线程；已由实�
 - `full408Acceptance=false`、`humanApprovalsGenerated=0`。
 
 本轮还明确记录：官方页面所列购买链接跳登录（未登录/未购买），Google Books API 返回 HTTP 429，百度结果仅用于发现二手线索且未进入官方证据。它不是穷尽检索；仍优先通过合法授权渠道取得 2027 详细正文及可复核历年原题/答案。
+
+### M3/M4 验收增量（2026-11-23，r14 / M3 r34）
+
+**OS 启动篇 r7 全31卡复评与返修。**Peirce 对 `os-boot-r7.json` 从新哈希全卡复核，31卡为29 PASS、2 UNPROVEN、0 FAIL；card023由r6/r7遗留的不确定转为PASS，明确按文章教学模型排序，不推广所有体系结构。card030 对“惰性初始化”和文件系统具体表结构泛化缺直接来源；card033 对文件更新/重分区/休眠恢复扩展缺来源。评委还发现 card023 sourceNotes 把U64误写U44，实际候选unitIds已绑定U64。报告 `m3-os-boot-r7-independent-r1.json` 绑定候选SHA `20ae8ab96e05370514c223c04efe299be0e44e0b9bae47bd3a105f78f620a2b5`；逐单元97/97正文哈希核验。随后主线程作者创建新候选 `os-boot-r8.json` SHA `ef8e4fc187080eb555dafba4ddb16254af3e2ac2b44226c8d69d93a94592871f`：收窄030/033到来源支持的教学模型，并纠正U64笔误。机器结构检查通过；新候选等待Peirce全31卡重新评审，r7任何PASS均不自动转移。
+
+**累计快照按最新OS版本替换。**r34以URL替换r33中的OS启动篇r6评审绑定：累计仍27/348篇，321篇批外，595 PASS、22 UNPROVEN、1 FAIL。四科：OS 6篇、122 PASS/8 UNPROVEN；CO 8篇、177 PASS/2 UNPROVEN/1 FAIL；CN 7篇、163 PASS/9 UNPROVEN；DS 6篇、133 PASS/3 UNPROVEN。范围快照 `m3-scope-snapshot-r26.json` SHA-256 `9a0f84d794866b2ca8e3738af118e293917c5f8fd011c1e3f451589b585944a4`。这只是当前逐卡AI评审库存；未产生人工批准或全文/408通过。
+
+**四篇候选作者返修完成，等待新哈希独立复审。**Zeno 在不覆盖旧版的情况下写入 `co-cisc-risc-r4.json`（18卡，SHA `519f7e44d12028743e28784f932fde344eaf6bdeda38205401afa63aea518732`）、`os-spooling-r3.json`（17卡，SHA `17ddf7ecac90682e78ba704f99a14ebad4331d0c98d3521c1cd61b79be74b1e2`）、`cn-ftp-dhcp-r2.json`（12卡，SHA `7fccdd2de1d7b5fd4d3742167f6d9de38e2375226e31588c184e7845c927c6da`）、`ds-ext-graph-is-tree-r2.json`（8卡，SHA `3cd4c34c0a06e4772195f41496135ff2af083cab19fe95b6050df582a26cfc8e`）。四篇结构/双向映射机器检查均通过，但所有卡都等待非作者独立评审；不得继承r1报告中的PASS。
+
+**M4 acquisition 更新。**高教社2027封面和书目页只加强年度/署名/ISBN书目证据；`evidence-2027-r13.json` 的审计仍为官方详细条目数、映射数与覆盖率 `null`，官方完整题文0、官方答案0、历年真题库存不完整、`full408Acceptance=false`。官方原卷入口仍未解决；不以考试培训摘要、书目或CodeBrick自称真题替代。
