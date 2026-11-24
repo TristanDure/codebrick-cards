@@ -1,3 +1,4 @@
+import copy
 import json
 import unittest
 from unittest.mock import patch
@@ -82,6 +83,86 @@ class ContentScopeSnapshotTests(unittest.TestCase):
         with patch.object(scope, 'GENERATOR_SHA256', '0'*64):
             with self.assertRaisesRegex(ValueError, 'generator source drift'):
                 self.build()
+
+    def test_four_subject_real_audit_keeps_mixed_decisions_and_outside_articles(self):
+        # End-to-end through audit_content_batch, not mocked subject totals.
+        from scripts import import_curated_articles as curated
+        articles = [copy.deepcopy(self.f.fixture.article_record)]
+        units = copy.deepcopy(self.f.fixture.units)
+        for subject, decision in [('co', 'FAIL'), ('cn', 'UNPROVEN'), ('ds', 'UNREVIEWED')]:
+            url = f'https://example.test/{subject}/article.html'
+            cache = f'.cache/html/{subject}/article.html'
+            raw = self.f.fixture.raw.replace('First source fact', subject + ' source fact')
+            path = self.root/cache
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(raw, encoding='utf-8')
+            parsed = curated.sync_sources.parse_article(raw, url)
+            content_hash = curated._hash_parsed_article(parsed)
+            article = {'sourceId': subject, 'title': parsed['title'], 'url': url,
+                       'cache': cache, 'contentHash': content_hash}
+            articles.append(article)
+            new_units = []
+            for section in curated.sync_sources.sections(parsed):
+                for block in section['sourceUnits']:
+                    for unit in block['units']:
+                        row = copy.deepcopy(self.f.fixture.units[0])
+                        row.update(knowledgeUnitId=unit['id'], sourceId=subject,
+                                   articleUrl=url, sectionIndex=section['sectionIndex'],
+                                   sectionHeadingPath=section['headingPath'],
+                                   blockIndex=unit['blockIndex'], unitIndex=unit['unitIndex'],
+                                   tag=unit['tag'], text=unit['text'])
+                        new_units.append(row)
+            units.extend(new_units)
+            primary, context = new_units
+            card_id = curated.stable_card_id(url, [primary['knowledgeUnitId']])
+            proposal = copy.deepcopy(self.f.fixture.proposal)
+            proposal['article'] = article
+            proposal['sourceUnits'][0].update(knowledgeUnitId=primary['knowledgeUnitId'], cardId=card_id)
+            proposal['sourceUnits'][1]['knowledgeUnitId'] = context['knowledgeUnitId']
+            card = proposal['cards'][0]
+            card.update(cardId=card_id, articleUrl=url,
+                        knowledgeUnitIds=[primary['knowledgeUnitId']])
+            rel = f'data/curated/{subject}.json'
+            self.f.write(rel, proposal)
+            entry = {'candidatePath': rel, 'candidateSha256': self.f.sha(rel)}
+            if decision != 'UNREVIEWED':
+                review = copy.deepcopy(self.f.review)
+                review['candidate'] = {'path': rel, 'sha256': self.f.sha(rel)}
+                review['source'] = {'articleUrl': url, 'articleContentHash': content_hash,
+                                    'cachePath': cache, 'rawHtmlSha256': self.f.sha(cache)}
+                row = review['cards'][0]
+                row.update(id=card_id, unitIds=card['knowledgeUnitIds'], decision=decision)
+                row['checks']['accuracy'] = decision
+                review['missingCoverage'].update(unitIds=card['knowledgeUnitIds'],
+                                                sectionIndices=[primary['sectionIndex']])
+                review_rel = f'data/_reviews/{subject}.json'
+                self.f.write(review_rel, review)
+                entry.update(reviewPath=review_rel, reviewSha256=self.f.sha(review_rel))
+            self.f.batch['entries'].append(entry)
+        outside = copy.deepcopy(articles[-1])
+        outside.update(url='https://example.test/ds/outside.html', title='Outside batch')
+        articles.append(outside)
+        inactive = copy.deepcopy(units[-1])
+        inactive.update(knowledgeUnitId='inactive-only', articleUrl=outside['url'],
+                        presentInCurrentSource=False)
+        units.append(inactive)
+        self.f.write('data/articles.json', {'version': 1, 'articles': articles})
+        self.f.write('data/knowledge-units.json', {'version': 2, 'units': units})
+        self.f.save()
+        before = {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
+        result = self.build()
+        self.assertEqual(result['corpus']['batchArticles'], 4)
+        self.assertEqual(result['corpus']['outsideBatchArticles'], 1)
+        self.assertEqual(result['corpus']['activeSourceUnits'], 8)
+        self.assertEqual(result['corpus']['reviewedVersionArticles'], 3)
+        self.assertEqual(result['corpus']['cardDecisions'],
+                         {'PASS': 1, 'FAIL': 1, 'UNPROVEN': 1, 'UNREVIEWED': 1})
+        self.assertEqual(result['subjects']['ds']['outsideBatchArticles'], 1)
+        self.assertEqual(result['subjects']['ds']['reviewedVersionArticles'], 0)
+        self.assertEqual(result['subjects']['ds']['activeSourceUnits'], 2)
+        self.assertEqual(result['remainingArticlesOutsideBatch'][0]['url'], outside['url'])
+        self.assertFalse(result['full408Acceptance'])
+        self.assertEqual(before, {p: p.read_bytes() for p in before})
 
     def test_cli_new_output_only_and_outside_rejected(self):
         args = ['--root', str(self.root), '--batch', str(self.f.batch_rel),
