@@ -597,3 +597,13 @@ Dalton（非作者）对OS同步r4全33卡重审，**33P/0U/0F**，不继承r3�
 - r77累计审计SHA：`e88592a911906690860bcbc9a95b0795e5f5678e24d63c0aa077849dcc59ff42`；r62 scope SHA：`0353e69de772526e9cc3a89e0149e632103b1079b1fc7934d8aa082bf2b6e0e7`。
 - OS同步r4报告SHA：`3ac13f9ccaaa43cabc26edde274967a49faf53ad93810598ff4bd3542d70ad27`。
 - 最新本地试用仍是r75，不自动吸收r76/r77的OS目录/OS同步新卡；不得把r77称“试用包已包含全部43篇”。
+
+
+## r78—r80：CN HTTP独立复评与CO/DS首评推进
+
+CN HTTP r3经Peirce全17卡独立复评为16P/1U，发现POST/GET暴露面与HTTPS传输保护被并成一题，U13及已有安全补充未支持GET日志泛化、TLS安全属性和配置前提。作者已产出18卡HTTP r4，须另一评委全18卡复审后才可替换入账。CO bus standard首评：25P/7U，主要是把PIPE补充外推为建立/保持/抖动、8b/10b受限游程、反射机制及端到端交换瓶颈等证据不足；DS linked queue首评34P/2U，缓存机制解释和只给题目链接的环形队列初始状态均未证明。按实际validation batch，CN HTTP r3→r78、CO bus standard→r79、DS linked queue→r80；最终46/348篇、**1,162P/10U/0F**、302篇批外，scope r63重核34,476单元。卡面有UNPROVEN的版本不进入精选整包包。
+
+试用r75独立只读核查通过所声明41篇/960卡的字节与选包边界，检查499项；AI核查不等于语义/全文通过，且builder无CAS。另作新localhost源的工作台桌面DOM冒烟：348/348目录加载、精选池切换、翻答案显示、标签“精编候选·未获内容批准”、answer/source DOM有内容、页面无水平溢出；未写笔记/评分/重置/导入，也未读私人学习状态。旧`127.0.0.1`标签命中陈旧JS标签，而新origin读到当前中性标签；五项前端标签回归全通过。CDP截图超时，故无像素/视觉通过；只覆盖一文章/桌面，非全站UI验收。
+- r80累计审计SHA：`45ab48a6b32d3317d208d84c261a3a27051ff2fb9defd81238b6b03dbd3935c3`；r63 scope SHA：`84aa9d9330dde759e06c5b1f14a1af2d0a470d627b86443356d20636ee84dc3d`。
+- DS链队来源卡评审报告SHA：`9cf12278539450275d75e99a6a56cd3c44be7a6cdbc614787690e9734bba2c1e`；OS目录r2报告SHA：保留于前节。
+- HTTP/CO/DS三篇未因旧版结果而宣告作者新版通过；变更后必须重新全卡核对候选哈希。
