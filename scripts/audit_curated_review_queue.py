@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
-def load(p): return json.loads(p.read_text(encoding="utf-8"))
+def load(p): return json.loads(p.read_text(encoding="utf-8-sig"))
 def audit(root=ROOT):
     root=Path(root).resolve(); articles=load(root/"data/articles.json")["articles"]
     reviews=collections.defaultdict(list)
@@ -41,10 +41,23 @@ def audit(root=ROOT):
             shardpath=root/"data/study"/a["file"]
             if sha(shardpath)!=a["sha256"] or shardpath.stat().st_size!=a["bytes"]: raise ValueError("published shard binding mismatch: "+a["file"])
             for d in load(shardpath)["curated"]:published[d["file"]]=d["sha256"]
+    article_urls={a["url"] for a in articles}
     drafts=collections.defaultdict(list)
     for path in sorted((root/"data/curated").glob("*.json")):
-        d=load(path); rel=path.relative_to(root).as_posix(); digest=sha(path)
-        url=d.get("articleUrl") or d.get("article",{}).get("url")
+        d=load(path)
+        # This directory also contains author metadata and structure audit JSON.
+        # Count only candidate-shaped objects with a URL in the frozen manifest;
+        # shape filtering is not structure validation or content approval.
+        if not isinstance(d,dict) or not isinstance(d.get("cards"),list):
+            continue
+        article=d.get("article",{})
+        if not isinstance(article,dict): article={}
+        url=d.get("articleUrl") or article.get("url")
+        if not isinstance(url,str) or url not in article_urls:
+            continue
+        if any(not isinstance(card,dict) for card in d["cards"]):
+            continue
+        rel=path.relative_to(root).as_posix(); digest=sha(path)
         matches=reviews.get((rel,digest),[])
         # PASS here is only a report claim tied to the exact file; NOT a semantic certification.
         claims=[r for r in matches if not r["excludedByProvenanceCorrection"] and str(r["decision"]).startswith("PASS") and r["cardCounts"].get("FAIL",0)==0 and r["cardCounts"].get("PASS",0)==len(d.get("cards",[])) and len(d.get("cards",[]))>0 and r["cardIds"]==[c.get("id",c.get("cardId")) for c in d.get("cards",[])]]

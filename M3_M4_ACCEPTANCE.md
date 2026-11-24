@@ -980,3 +980,25 @@ M4本机证据r22重新审计r34：目标2027，officialRequirementCount=null，
 - r119 `a88d0e7a25f7d9d3e8efae219d4b5e918bdde5e7ad0540ef0583018ea546e898`；audit `ee74cddeaa8faad682690427d172993dbec78f4edd34218270d4b0a26f7be888`
 - r120 `de9e5fc72c489732b21d9f9780cd9f0fda6c23fb2a22d7eff2fc16fb2cc1e33d`；audit `93f0c132e43c375c636e0e5ba5195f588f871744da94e91e77b07d3e8af09b86`
 - scope r99 `461d30a7f4bd7f1d6703d4550ba4db5bf8b4098c6d4eaa7d7ebbe36510c255d8`。逐篇候选/报告绑定与missingCoverage明细均留在本机，不公开第三方正文或详细卡片。
+
+
+## r121–r122：DS内存I/O与OS链接装入首审新增真实缺陷
+
+r121新增DS内存I/O：26卡21P/4U/1F；r122新增OS链接装入：37卡24P/13U/0F。当前64/348篇、1896P/153U/2F，284篇批外。两篇重新读取缓存原文、逐卡四维判断并通过绑定审计，不继承作者结论。
+
+DS FAIL为`curated-ds-c-memory-010`：无条件断言char整型提升为int错误；在合法C实现中plain char值域可能不被int覆盖而提升为unsigned int，不能用当前字符值可表示来替代整个类型值域条件。须补充分平台条件或安全显式转换及格式匹配。来源、C标准摘录字节与语义分别记录，不把站内简单putchar片段当作完整整数提升证据。已交非评委作者Ramanujan返修，尚无新哈希复审，FAIL不关闭。
+
+OS链接装入13U、41个单元无卡映射；编译/链接/装入边界、动态链接/重定位扩展若无直接来源支持，不以常识补证。已交非评委作者Sartre返修。文件树原FAIL同样保留，r2候选已交另一评委Ohm复审；候选作者修订/结构通过不计作修复验收。
+
+本批两篇不加入仅选整包全AI PASS的45篇/1145卡试用池。全部内容/人工/整篇/408批准false；目标2027官方条款数与映射仍null、官方原题证据0。并发任务pending不计入累计。
+
+- r121 SHA `88617d344545fe49723c0bd40f344b7fb8c22b1922dcd402fdfc731af6c7e9b3`；audit `01e841ce5bf0c5ec1385fc3b5945db1096b43e1d3a7fcf3d2186b2e4a5572deb`
+- r122 SHA `be7462d0bb96496ed8fba516bda0fc1452dacd4d305e32ee19f3ea020eac076f`；audit `c14f6b4ae38e017549b5682256a58ec87311e1741156efb0ce10efac30fba732`
+- scope r100 SHA `8c832307f045a0b20813b4571aa522b83f3a9faff43c2aff684f430202458b79`。
+
+
+### r122工具与台账补充验证
+
+队列审计已增加candidate形状与manifest URL过滤：作者元数据、结构审计JSON、非字典卡及未知URL不计候选版本；UTF-8 BOM输入可读取。新增2个回归用例。全量441项运行、429通过、12跳过；Node进度测试17/17通过。队列历史报告目录扫描仍不同于M3累计`data/_reviews`精确绑定，不能用队列PASS字段替代本日志累计。
+
+M2处置快照r18已构建并验证，ledger SHA `0e064354de966cedd1bca4f4a23c47f021428dc7467d88ec25e29fce68a98a14`：348篇/4441节/34476单元、416空节均有机器处置，但内容闭环空节数仍0；25921单元没有结构有效精编处置。该快照绑定构建时输入，后续新增候选不自动纳入；结构处置记账不代表M3语义审查、官方能力或人工批准。

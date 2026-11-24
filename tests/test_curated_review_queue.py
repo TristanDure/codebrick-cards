@@ -41,6 +41,26 @@ class ReviewQueueTests(unittest.TestCase):
     def test_versions_not_articles(self):
         self.draft();self.draft("data/curated/a-r2.json")
         x=audit(self.root);self.assertEqual(x["summary"]["candidateArticles"],1);self.assertEqual(x["summary"]["candidateVersions"],2)
+    def test_metadata_and_non_candidate_json_not_counted_as_drafts(self):
+        self.draft()
+        for name,value in {
+            "metadata": {"articleUrl":"https://example.test/a","cards":3},
+            "audit": {"article":{"url":"https://example.test/a"},"ok":True},
+            "array": [],
+            "bad-card": {"articleUrl":"https://example.test/a","cards":[None]},
+            "bad-article": {"article":None,"cards":[]},
+            "unknown": {"articleUrl":"https://example.test/outside","cards":[{"id":"x"}]},
+        }.items():
+            self.write("data/curated/"+name+".json",value)
+        self.assertEqual(audit(self.root)["summary"]["candidateVersions"],1)
+
+    def test_bom_candidate_and_manifest_do_not_break_inventory(self):
+        self.draft()
+        for relative in ["data/curated/a.json","data/articles.json"]:
+            path=self.root/relative
+            path.write_bytes(b"\xef\xbb\xbf"+path.read_bytes())
+        self.assertEqual(audit(self.root)["summary"]["candidateVersions"],1)
+
     def test_empty_cards_not_vacuous_pass(self):
         h=self.draft(cards=[]);self.review(h,ids=());self.assertFalse(self.row()["candidateVersions"][0]["hasExactHashPassClaim"])
     def test_corrupt_published_shard_fails_closed(self):
