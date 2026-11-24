@@ -716,3 +716,14 @@ M2 r12/r13因新候选加入而不再精确覆盖当前文件集合，不能继�
 ### M4 r2官方正文发现（2026-11-24）
 
 在8个新增官方入口预算内检查北京教育考试院公开门户、高教社书目/样章入口等，仍未取得2027官方大纲条文或历年官方原题。故officialRequirementCount=null、官方题证据数=0，官方逐条映射/真题验收未完成。报告 `data/_reviews/mass-20261123/m4-official-primary-text-discovery-r2.json` SHA-256 `1016739f7e0c0ab774870e1b12371437c699bfecf08e28bc8a62caba6faccde8`；摘要SHA `3bdb4fbd45e54b85ae6c1cb66ce00dcf2a436574945053dab360a9d20f02aae9`。公开响应字节绑定在本机忽略缓存`.cache/evidence/m4-primary-text-discovery-r2/`，不含入公开仓库。
+
+
+## r94—r95：CN HTTP r7与DS双链表r2复审
+
+CN「HTTP」r7（作者Peirce，非作者独立AI评委）在r94替换r6：24P/0U/0F，4项来源绑定修复后全卡逐项重审。原r6结论不转移；r7仅代表该文章候选卡的AI评审记录。DS「双链表」r2（作者Zeno，非作者独立AI评委）在r95替换旧版：17P/26U/0F。插入/删除题的指针更新逻辑多数正确，但来源未完整说明有效结点成员、fresh allocation、所有权/allocator兼容、跨文章对照等契约，因此严守来源映射标UNPROVEN；零FAIL不等于已全证。
+
+r95累计51/348篇、**1,307P/56U/2F**，297篇在批外；范围快照r76覆盖34,476活跃来源单元。静态链表r2的两项FAIL仍保留，r3候选等待独立评审。
+- r94累计SHA：`5f682b0a1b2eb5248dad75ddd995b54ad1303f587f82fff55370b4910d89f817`；审计SHA：`9c76ac75aa5cf7cb8e1a2586be6cfec8f88a89ac8541f0e3da0dbcd568fcdbb1`。
+- r95累计SHA：`baa2dc9374e7a39807f1ff00c9b56f144040e549a84fe02feae3fbdd923e6189`；审计SHA：`e1e28910b2a1bb31b0c7429809dce2057b75b4e9a74c550faf95a9b7ee0d19b9`；r76范围SHA：`ed3360ed216389737ba3d094f7f3fed5cafa8ed1faf0b71c0e3d290882a2b9cb`。
+
+M2精确台账r15现已由独立复核脚本逐项验证（SHA `600997de1a1baa3c83f71021de6e07ccaba9291adf6273fd72941631ef0a002f`）：348篇、4,441节、34,476单元、416空节；25,921单元仍无结构有效的候选处置，空节语义闭环为0。它是完整结构账，不是语义闭环或408验收。
