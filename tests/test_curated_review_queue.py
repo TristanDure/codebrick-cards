@@ -61,6 +61,37 @@ class ReviewQueueTests(unittest.TestCase):
             path.write_bytes(b"\xef\xbb\xbf"+path.read_bytes())
         self.assertEqual(audit(self.root)["summary"]["candidateVersions"],1)
 
+    def test_missing_null_empty_duplicate_and_conflicting_ids_cannot_claim_pass(self):
+        for cards in [[{}],[{"id":None}],[{"id":""}],[{"id":"  "}],
+                      [{"id":"a"},{"id":"a"}],[{"id":"a","cardId":"other"}]]:
+            with self.subTest(cards=cards):
+                h=self.draft(cards=cards)
+                ids=tuple(c.get("id") for c in cards)
+                self.review(h,ids=ids)
+                self.assertEqual(self.row()["candidateVersions"],[])
+
+    def test_conflicting_url_aliases_cannot_bind_one_candidate_to_wrong_article(self):
+        h=self.write("data/curated/a.json",{
+            "articleUrl":"https://example.test/a", "article":{"url":"https://example.test/b"},
+            "cards":[{"id":"a"}],"unitDisposition":[],"issues":[]})
+        self.review(h)
+        self.assertEqual(self.row()["candidateVersions"],[])
+
+    def test_legacy_card_id_alias_still_counts(self):
+        h=self.draft(cards=[{"cardId":"a"}]);self.review(h)
+        self.assertTrue(self.row()["candidateVersions"][0]["hasExactHashPassClaim"])
+
+    def test_report_alias_conflicts_and_bad_card_shapes_cannot_claim_pass(self):
+        h=self.draft()
+        for cards in [[{"cardId":"a","id":"other","decision":"PASS"}],
+                      [None], {}, [{"cardId":None,"decision":"PASS"}],
+                      [{"cardId":"a","decision":"PASS"},{"cardId":"a","decision":"PASS"}]]:
+            with self.subTest(cards=cards):
+                self.write("data/reports/a-independent-review.json",{
+                    "candidate":{"file":"data/curated/a.json","sha256":h},
+                    "decision":"PASS","cards":cards})
+                self.assertFalse(self.row()["candidateVersions"][0]["hasExactHashPassClaim"])
+
     def test_empty_cards_not_vacuous_pass(self):
         h=self.draft(cards=[]);self.review(h,ids=());self.assertFalse(self.row()["candidateVersions"][0]["hasExactHashPassClaim"])
     def test_corrupt_published_shard_fails_closed(self):

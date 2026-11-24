@@ -32,6 +32,15 @@ def audit(root=ROOT):
         if not isinstance(candidate,str) or not isinstance(digest,str): continue
         verdict=r.get("decision") or r.get("result",{}).get("cardTextVerdict")
         cards=r.get("cards",[])
+        if not isinstance(cards,list) or any(not isinstance(card,dict) for card in cards):
+            continue
+        if any(card.get("cardId") and card.get("id") and card["cardId"] != card["id"] for card in cards):
+            continue
+        report_ids=[card.get("cardId",card.get("id")) for card in cards]
+        if any(not isinstance(cid,str) or not cid.strip() for cid in report_ids):
+            continue
+        if len(report_ids) != len(set(report_ids)):
+            continue
         counts=collections.Counter(v.get("decision",v.get("verdict","UNPROVEN")) for v in cards)
         reviews[(candidate.replace("\\","/"),digest)].append({"file":path.relative_to(root).as_posix(),"sha256":sha(path),"decision":verdict,"cardCounts":dict(counts),"cardIds":[v.get("cardId",v.get("id")) for v in cards],"scopeClaimOnly":True,"excludedByProvenanceCorrection":(path.relative_to(root).as_posix(),sha(path)) in excluded_reviews})
     published={}; index_path=root/"data/study/index.json"
@@ -52,10 +61,19 @@ def audit(root=ROOT):
             continue
         article=d.get("article",{})
         if not isinstance(article,dict): article={}
+        if d.get("articleUrl") and article.get("url") and d["articleUrl"] != article["url"]:
+            continue
         url=d.get("articleUrl") or article.get("url")
         if not isinstance(url,str) or url not in article_urls:
             continue
         if any(not isinstance(card,dict) for card in d["cards"]):
+            continue
+        if any(card.get("id") and card.get("cardId") and card["id"] != card["cardId"] for card in d["cards"]):
+            continue
+        card_ids=[card.get("id",card.get("cardId")) for card in d["cards"]]
+        if any(not isinstance(cid,str) or not cid.strip() for cid in card_ids):
+            continue
+        if len(card_ids) != len(set(card_ids)):
             continue
         rel=path.relative_to(root).as_posix(); digest=sha(path)
         matches=reviews.get((rel,digest),[])
