@@ -769,3 +769,13 @@ OS文件物理结构r1的单个FAIL返修已派给非作者作者队列；静态
 静态链表r3（作者Laplace，非作者独立AI评委）30卡28P/2U/0F，在r99替换r2的19P/7U/2F；两张复合卡拆解后的原子性FAIL消除，但2项证据缺口仍不计通过。累计53/348篇、**1,424P/92U/2F**，295篇批外；剩余FAIL分别为OS物理结构定义复合目标与CO总线吞吐必要条件错误，均进入返修。不是人工批准或全项目验收。
 
 累计SHA `394b8d2f434f66c7f2546813809a433fb1f5171db41629fb1e373b14b2e44d74`；审计SHA `77563f3f9f89df774c963c36ec65779f0cd9ca66425662f6ca41503057b7070b`；r81范围SHA `d757130e98688751c5ebad0b5e4df67ac3a8d3efb7746de702f1d25a5ff58f4e`。
+
+
+## r100—r101：CN传输媒体r3与缺口变换出处更正
+
+CN传输媒体r3在r100更换r2：33P/1U/0F；唯一UNPROVEN是方向性模型前提超出U35。修订删除视距成因扩写后，物理成因/实际站距仍deferred。
+r100是r99加该新复评；r101再将四份旧的gap-only审核副本升级为带明确`accountingCorrection`及原review SHA的r2派生副本：卡面决定/题答/来源/原reviewer字段逐字节不变，新增unit/section缺口由主线程记录，不声称原评委签署了新字段。r101累计53/348篇、**1,424P/92U/2F**，295篇批外。它只修正缺口记账，不重作语义卡审。
+- r100 SHA `0383a5334b494cb91d3bd528ed143a8be94bed07d02c5e038f0a05056aefda65`；audit `c1b8497573e42bd2a4760e4256d088068201db40db918d556f22c163470877fa`；r82 scope `2f9a0f73d164b5dcd67a187016fb2d83cead12643bb5012ff98352016b1c20b3`。
+- r101 SHA `54ce6de1c16d02cd35eff4335444e566cde5fb12110f2f5b95ace3da67e5c691`；audit `b322b53bf7b9567a8d17d8645fb7277e519f4802e4f37bc34e2b53d303f254da`；r83 scope `41d03f133bddde374ad70d1d92b2f8eb18ce52aa8076150e1b82b6d1d9e89e9c`。
+
+M3全量Python438中426通过、12跳过，Node17/17；r99时重新确认。本地study分片完整性348/348。官方M4正文/原题仍未获，不能完成大纲逐条映射或历年官方题证据链。
