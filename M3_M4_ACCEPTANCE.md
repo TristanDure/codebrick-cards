@@ -889,3 +889,44 @@ r109替换该篇旧版，累计仍56/348篇、1,640P/132U/0F、292篇批外；sc
 新队列清单r14机器复核共348篇、94篇有作者候选、199候选版本、44篇出现在固定精选试用包。r109 M3卡级累计仅覆盖56篇，其中OS 13篇/CO 15篇/CN 13篇/DS 15篇；批外为OS 68、CO 57、CN 49、DS 118。队列状态与M3累计并不相同：历史候选、未审候选、精选发布版的定义不同，不能用“有候选/已发布”推算评审通过。队列审计SHA `b7a3c9c105076e88b615943f6c1e5e1ed0cb18bd67436677576e74a2473ec170`；只作文件清单与报告声明盘点，不是逐卡语义审核。
 
 尽管AI及机器流程可快速产生阶段证据，OS/CN返修和其他DS新文章的逐卡复审产物目前仍待任务代理交付；本轮不将未落盘项目计入累计，不把pending称作通过。下轮从r109开始，仅当新候选与评审哈希可复核且非作者身份作为声明可区分时再追加r110+。
+
+## r110–r114：DS顺序栈、DS数组矩阵、OS CPU模式、CN传输媒体r4、CN DNS r2非作者首审/复审并入
+
+本节为2026-11-24追加，不覆盖r109及更早记录。以下评审均为非作者AI评委的逐卡判断，身份为声明、未经密码学认证；humanApproval、contentApproved、fullArticleApproved、overall408Acceptance、full408Acceptance、sourceCorrectnessApproved全部为false。UNPROVEN表示现有绑定证据不足以确认，不等于事实错误。结构及哈希审计通过不是语义、身份或人工认证。
+
+| 累计 | 并入项 | 评委 | 本项结果 | 累计篇数 | 累计PASS/UNPROVEN/FAIL | 批外 |
+|---|---|---|---|---:|---|---:|
+| r110 | DS顺序栈首审（新增） | Peirce | 28P/3U/0F（31卡） | 57 | 1,668/135/0 | 291 |
+| r111 | DS数组矩阵首审（新增） | independent-reviewer-ds-c-arrays-r1 | 14P/20U/0F（34卡） | 58 | 1,682/155/0 | 290 |
+| r112 | OS CPU模式首审（新增，作者Cedar） | Newton | 28P/16U/0F（44卡） | 59 | 1,710/171/0 | 289 |
+| r113 | CN传输媒体r4复审（替换旧版，作者Newton） | Laplace | 34P/0U/0F（34卡） | 59 | 1,711/170/0 | 289 |
+| r114 | CN DNS r2首审（替换r1，作者Zeno） | independent-reviewer-cn-dns-r2-r1 | 57P/49U/0F（106卡） | 59 | 1,674/210/0 | 289 |
+
+r114的PASS低于r113，原因是DNS由r1（94P/9U）替换为更严格的r2（57P/49U）；r2把来源绑定不足的卡列为UNPROVEN，没有为了计数保留r1。传输媒体r4把旧版唯一U卡改为U35直接支持的相邻中继站LOS条件，U34/U67绝对分类保持unresolved。
+
+按科目已评篇数（r114）：OS 14/81、CO 15/72、CN 13/62、DS 17/133；批外OS 67、CO 57、CN 49、DS 116，合计289篇。
+
+### 候选与评审SHA-256
+
+- DS顺序栈：候选 `1bcdd0237a5692948da6155d7c3683bc4338f716ba8fe255c89b94cd2102d4e2`；评审 `1a92409075012915c471e08c0f0ffc7befa5b90e2ca2721e15158732944e617b`
+- DS数组矩阵：候选 `4741474cdc92b06b4ccedde06a42118204f8a34f4c4dcd8012efcd149f6e274c`；评审 `52a57f89ee4ca80c20970845cf26ecd54d1d18b2a3fedbfc306ea7bc9e2587ad`
+- OS CPU模式：候选 `1c7e22c2821c8769fd4607862b05d91464142f76b107ad24183e7ea93e96700e`；评审 `4051d64c5a1e8c8f9cd32866dda0c7110dcd99f85c6fb580afaf5a4c792960c4`
+- CN传输媒体r4：候选 `865b7871e2f8d6e32d3960d6527ae61376e512f71001e5da4a5a639129681141`；评审 `16b646526307610d40a79057d728d962f6ee61137bd53cfead6b6a1c93adce36`
+- CN DNS r2：候选 `016d47d73b9f9d57bb1b3967a3d9cd9dd2d516246d55dbe540b240f44c6bbc7f`；评审 `44c8852f3e73bf719d712ce162f5e969b10b45247fc6c817e2f3eb07a7224683`
+
+### 累计与范围快照SHA-256
+
+- r110 `b3376c865e656597bf17d881254b6ad8ed5704ee1717a576686f0e566adc1c94`；audit `e1defd6fcc63ac6b4b97d1fad36f176fd77702cd9cda20a50e77cf9092709d72`；scope r90 `4202331ecdf2e7a503f971a723e7030c38b15f03973ecd53dea66441848b9410`
+- r111 `983bcfd4b94baeb3e2c401cd27eb8c10fbb48c03544bf06c788acc0c0201861e`；audit `270368b352cb7dc1cd5f325bdcf46ba0781f7943ca90c4b72b2f6c0371838ed4`；scope r91 `806bbb814ca7c4946ffb88596535873ce77dfe6c3af870e35eabef5ed5748ac5`
+- r112 `14eb3a3f5d8e79dbe44bcc482c3118d169df9d9174f69b4c783dac52a3e55760`；audit `64e7d81ff3b261808e977d250d667ac27422cd1d96fd70e0b6cc4fc8390b866b`；scope r92 `80b95467a35f0f973b92771115378916e346185e2a59aceb5d8cd47b2914de66`
+- r113 `9bbc870f68b5d4877091568be7718813d97465b516777c522464ed73c2ebb633`；audit `d010029f36f13d85919e00a89b1b2977b1607e2335107c8cfba4f13d508d8ab2`；scope r93 `abedeeaf84a09c552269ca77afb782290209158238e657af0c5c2f931b4b566f`
+- **r114（当前有效）** `6d1d758ec329bc909bde73a2b730cde1ab5cc54223d82a272a215cf622383e73`；audit `2fd93412005fab3339e9d1b40048e9e3d8580132cb74700def007a0d46030f58`；scope r94 `95c248d20ad04bf20485d1ad9fd82414aa3a5f67a9acb666aa2c5b5d67140bae`
+
+### 未闭环项（不得视为通过）
+
+- DNS r2仍有53个来源单元未解决（涉及章节2、4–10、13、15）；RFC1034/1035/2181/3596本地摘录仅核验字节一致，来源与时效未认证。
+- 传输媒体r4仍有24个unresolved/conflict单元、23个开放issue、19项deferred能力、53个未映射来源单元。
+- OS CPU模式仍有13个conflict单元、11个开放issue；UNPROVEN卡005/006/008/015/016/030/033–037/039–042/044的关键论据未直接绑定来源。
+- DS数组矩阵20张U卡待补来源或收窄；DS顺序栈25个来源单元无卡映射、43个单元缺口。
+- 官方2027大纲逐条映射与官方原题证据链仍未建立（officialRequirementCount=null，官方原题证据0），M4不完整。
+- 全站仍有289篇不在累计批次内；整篇覆盖、人工批准、全站408验收均为false。
