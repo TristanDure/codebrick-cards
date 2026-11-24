@@ -6,9 +6,9 @@ import hashlib
 from pathlib import Path
 
 try:
-    from .build_disposition_ledger import ROOT, assemble, curated_tool, inside, read
+    from .build_disposition_ledger import ROOT, assemble, curated_proposal_files, curated_tool, inside, read
 except ImportError:
-    from build_disposition_ledger import ROOT, assemble, curated_tool, inside, read
+    from build_disposition_ledger import ROOT, assemble, curated_proposal_files, curated_tool, inside, read
 
 
 def verify(root: Path, ledger_path: Path) -> dict:
@@ -28,7 +28,7 @@ def verify(root: Path, ledger_path: Path) -> dict:
     expected_keys.update('tool:' + name for name in required_tools)
     manifest_doc = read(inside(root, inputs['articleManifest']['path']))[0]
     expected_keys.update('cache:' + article['url'] for article in manifest_doc['articles'])
-    curated_files = sorted((root / 'data/curated').glob('*.json'))
+    curated_files = curated_proposal_files(root)
     curated_rel = {path.relative_to(root).as_posix() for path in curated_files}
     audited_rel = {row.get('file') for row in ledger['candidateAudits']}
     if audited_rel != curated_rel or len(audited_rel) != len(ledger['candidateAudits']):

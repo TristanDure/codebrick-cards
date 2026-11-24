@@ -188,6 +188,16 @@ class VerifyDispositionLedgerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'do not exactly cover curated proposal files'):
             verify(self.root, self.ledger_path)
 
+    def test_structure_check_artifacts_are_not_curated_proposals(self):
+        check = self.root / 'data/curated/demo-r2-structure-check.json'
+        check.parent.mkdir(parents=True, exist_ok=True)
+        check.write_text('{"ok": true}', encoding='utf-8')
+        self.save()
+        result = verify(self.root, self.ledger_path)
+        self.assertFalse(result['full408Acceptance'])
+        from scripts.build_disposition_ledger import curated_proposal_files
+        self.assertNotIn(check, curated_proposal_files(self.root))
+
     def test_each_required_binding_is_mandatory(self):
         original = copy.deepcopy(self.ledger)
         for key in original['inputs']:

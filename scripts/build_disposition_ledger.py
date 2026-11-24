@@ -295,6 +295,15 @@ def assemble(root: Path, articles_doc: dict, original_units: dict, coverage: dic
     }
 
 
+NON_PROPOSAL_CURATED_SUFFIXES = ('-structure-check.json',)
+
+
+def curated_proposal_files(root: Path) -> list[Path]:
+    """Curated candidate proposals only; excludes structure-check artifacts, never alters history."""
+    return sorted(p for p in (root / 'data/curated').glob('*.json')
+                  if not p.name.endswith(NON_PROPOSAL_CURATED_SUFFIXES))
+
+
 def build_ledger(root: Path) -> tuple[dict, dict, dict, dict]:
     root = root.resolve()
     stable_files = [root / 'data/articles.json', root / 'data/knowledge-units.json', root / 'data/cards/cards.json']
@@ -319,7 +328,7 @@ def build_ledger(root: Path) -> tuple[dict, dict, dict, dict]:
     units = curated_tool._units_by_id(units_doc)
     formal_ids = {c['id'] for c in cards_doc['cards']}
     candidates = []
-    for p in sorted((root / 'data/curated').glob('*.json')):
+    for p in curated_proposal_files(root):
         proposal, digest = read(p)
         audit = curated_tool._validate_proposal(proposal, root=root, candidate_path=p,
             articles=articles, ledger_by_id=units, formal_card_ids=formal_ids)
