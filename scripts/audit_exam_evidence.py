@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 from collections import Counter
 from datetime import datetime, timezone
@@ -74,6 +75,193 @@ def quoted_evidence(root: Path, locator: dict, source: dict) -> dict:
     if not isinstance(locator.get('location'), str) or not locator['location'].strip():
         raise ValueError('quote needs page/section/paragraph location')
     return binding
+
+
+
+def _secondary_json(raw: bytes, label: str):
+    """Bound attachment JSON resources and convert decoder recursion to validation failure."""
+    if len(raw) > 16 * 1024 * 1024:
+        raise ValueError('secondary execution JSON exceeds 16 MiB: ' + label)
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError('duplicate secondary execution JSON key: ' + key)
+            result[key] = value
+        return result
+
+    def reject_constant(value):
+        raise ValueError('non-standard secondary execution JSON constant: ' + value)
+
+    def finite_float(value):
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError('non-finite secondary execution JSON number: ' + value)
+        return number
+
+    try:
+        document = json.loads(raw, object_pairs_hook=unique_object,
+                              parse_constant=reject_constant, parse_float=finite_float)
+    except (RecursionError, UnicodeError) as exc:
+        raise ValueError('secondary execution JSON depth or encoding invalid: ' + label) from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError('secondary execution JSON invalid: ' + label) from exc
+    stack = [(document, 0)]
+    while stack:
+        value, depth = stack.pop()
+        if depth > 64:
+            raise ValueError('secondary execution JSON depth exceeds 64: ' + label)
+        if isinstance(value, dict):
+            stack.extend((v, depth + 1) for v in value.values())
+        elif isinstance(value, list):
+            stack.extend((v, depth + 1) for v in value)
+    return document
+
+
+def _secondary_boundaries(document):
+    """Reject contradictory approval/provenance claims even in nested metadata."""
+    false_fields = {'humanApproval', 'fullArticleApproved', 'overall408Acceptance',
+                    'full408Acceptance', 'contentApproved', 'officialAuthorityVerified'}
+    zero_fields = {'officialQuestionEvidenceAdded', 'officialAnswerEvidenceAdded',
+                   'officialQuestionEvidenceCountAdded', 'officialAnswerEvidenceCountAdded'}
+    true_fields = {'notOfficialAnswer', 'notWholeCardReview'}
+    stack = [document]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, dict):
+            for key, value in item.items():
+                if ((key in false_fields and value is not False)
+                        or (key in zero_fields and (type(value) is not int or value != 0))
+                        or (key in true_fields and value is not True)):
+                    raise ValueError('secondary execution cannot grant approval or contradict non-official boundaries: ' + key)
+                stack.append(value)
+        elif isinstance(item, list):
+            stack.extend(item)
+
+
+def audit_secondary_execution(root: Path, attachment: dict, pin) -> dict:
+    """Verify optional execution-attachment bytes, never grant question approval.
+
+    Execution outcomes and reviewer identity remain declarations. This does not
+    execute code, prove algorithms, or promote secondary papers to official ones.
+    """
+    required = {'execution', 'independentReview', 'candidate', 'scope',
+                'officialQuestionEvidenceAdded', 'officialAnswerEvidenceAdded',
+                'notOfficialAnswer', 'notWholeCardReview'}
+    if not isinstance(attachment, dict) or set(attachment) != required:
+        raise ValueError('secondary execution attachment fields are incomplete or unknown')
+    if (any(type(attachment.get(k)) is not int or attachment[k] != 0 for k in
+            ('officialQuestionEvidenceAdded', 'officialAnswerEvidenceAdded'))
+            or attachment.get('notOfficialAnswer') is not True
+            or attachment.get('notWholeCardReview') is not True
+            or not isinstance(attachment.get('scope'), str) or not attachment['scope'].strip()):
+        raise ValueError('secondary execution must retain explicit non-official boundaries')
+
+    def bind(binding, label):
+        if (not isinstance(binding, dict) or set(binding) != {'path', 'sha256'}
+                or not isinstance(binding['path'], str) or not binding['path'].strip()
+                or not isinstance(binding['sha256'], str)
+                or not re.fullmatch(r'[a-f0-9]{64}', binding['sha256'])):
+            raise ValueError('invalid secondary execution binding: ' + label)
+        path = inside(root, binding['path'])
+        if path.stat().st_size > 16 * 1024 * 1024:
+            raise ValueError('secondary execution artifact exceeds 16 MiB: ' + label)
+        raw = path.read_bytes()
+        if len(raw) > 16 * 1024 * 1024:
+            raise ValueError('secondary execution artifact exceeds 16 MiB: ' + label)
+        if hashlib.sha256(raw).hexdigest() != binding['sha256']:
+            raise ValueError('stale secondary execution binding: ' + label)
+        pin('secondaryExecution:' + label, binding)
+        return raw
+
+    candidate = _secondary_json(bind(attachment['candidate'], 'candidate'), 'candidate')
+    execution = _secondary_json(bind(attachment['execution'], 'execution'), 'execution')
+    review = _secondary_json(bind(attachment['independentReview'], 'independentReview'), 'review')
+    if (not isinstance(candidate, dict) or candidate.get('schema') != 'codebrick-curated-article'
+            or not isinstance(execution, dict)
+            or execution.get('schema') != 'codebrick-local-candidate-execution'
+            or type(execution.get('version')) is not int or execution['version'] != 1
+            or execution.get('candidate') != attachment['candidate']
+            or not isinstance(review, dict)
+            or review.get('schema') != 'codebrick-q42-code-execution-independent-review'
+            or type(review.get('version')) is not int or review['version'] != 2):
+        raise ValueError('secondary execution report schemas or candidate linkage differ')
+    allowed_execution = {'schema', 'version', 'recordedAt', 'author', 'candidate', 'runner',
+                         'compiler', 'results', 'totalCases', 'scope', 'limits', 'independentReview',
+                         'officialQuestionEvidenceCountAdded', 'officialAnswerEvidenceCountAdded',
+                         'humanApproval', 'fullArticleApproved', 'overall408Acceptance'}
+    allowed_review = {'schema', 'version', 'reviewId', 'reviewedAt', 'reviewer', 'decision',
+                      'scope', 'inputs', 'questionBasis', 'checks', 'limitations',
+                      'candidate', 'execution', 'humanApproval', 'fullArticleApproved',
+                      'overall408Acceptance'}
+    if set(execution) - allowed_execution or set(review) - allowed_review:
+        raise ValueError('secondary execution reports contain unknown fields')
+    _secondary_boundaries(execution)
+    _secondary_boundaries(review)
+    for key in ('candidate', 'execution'):
+        if review.get(key) != attachment[key]:
+            raise ValueError('secondary execution review declares a different target: ' + key)
+    for field in ('humanApproval', 'fullArticleApproved', 'overall408Acceptance'):
+        if execution.get(field) is not False:
+            raise ValueError('secondary execution cannot grant approval')
+    reviewer = review.get('reviewer')
+    if (not isinstance(reviewer, dict) or reviewer.get('kind') != 'ai'
+            or reviewer.get('independentOfExecutionEvidenceAuthor') is not True
+            or reviewer.get('humanApproval') is not False
+            or not isinstance(reviewer.get('name'), str) or not reviewer['name'].strip()):
+        raise ValueError('secondary execution reviewer declaration is incomplete')
+    inputs = review.get('inputs')
+    if (not isinstance(inputs, list) or attachment['candidate'] not in inputs
+            or attachment['execution'] not in inputs):
+        raise ValueError('secondary execution review must bind the same candidate and execution')
+    for n, binding in enumerate(inputs):
+        bind(binding, 'reviewInput:' + str(n))
+    bind(execution.get('runner'), 'runner')
+    basis = review.get('questionBasis')
+    if (not isinstance(basis, dict) or basis.get('status') != 'secondary-unverified'
+            or any(type(basis.get(k)) is not int or basis[k] != 0 for k in
+                   ('officialQuestionEvidenceCountAdded', 'officialAnswerEvidenceCountAdded'))):
+        raise ValueError('secondary execution question basis must remain secondary')
+    basis_binding = {k: basis.get(k) for k in ('path', 'sha256')}
+    if basis_binding not in inputs:
+        raise ValueError('secondary execution question basis must be bound by review inputs')
+    reserved_paths = {inside(root, attachment[k]['path']) for k in
+                      ('candidate', 'execution', 'independentReview')}
+    reserved_paths.add(inside(root, execution['runner']['path']))
+    if inside(root, basis_binding['path']) in reserved_paths:
+        raise ValueError('secondary execution question basis must be a distinct transcription')
+    transcription = _secondary_json(bind(basis_binding, 'questionBasis'), 'questionBasis')
+    if (not isinstance(transcription, dict)
+            or transcription.get('schema') != 'codebrick-secondary-item-transcription'
+            or type(transcription.get('version')) is not int or transcription['version'] != 1
+            or transcription.get('provenanceStatus') != 'secondary-unverified'
+            or transcription.get('officialAuthorityVerified') is not False
+            or not isinstance(transcription.get('transcription'), str)
+            or not transcription['transcription'].strip()):
+        raise ValueError('secondary execution question basis needs a secondary transcription document')
+    _secondary_boundaries(transcription)
+    rows = execution.get('results')
+    if not isinstance(rows, list) or not rows:
+        raise ValueError('secondary execution results must be nonempty')
+    total = 0
+    for n, row in enumerate(rows):
+        if not isinstance(row, dict) or type(row.get('cases')) is not int or row['cases'] < 1:
+            raise ValueError('secondary execution case counts must be positive integers')
+        total += row['cases']
+        for field in ('harness', 'stdout'):
+            bind({'path': row.get(field), 'sha256': row.get(field + 'Sha256')},
+                 str(n) + ':' + field)
+    if type(execution.get('totalCases')) is not int or execution['totalCases'] != total:
+        raise ValueError('secondary execution total case count differs')
+    if not isinstance(review.get('decision'), str) or not review['decision'].strip():
+        raise ValueError('secondary execution review needs its declared conclusion')
+    return {'attachmentBindingsVerified': True, 'declaredCases': total,
+            'declaredReviewDecision': review['decision'],
+            'assessment': 'local-byte-bindings-and-declarations-only',
+            'executionRerun': False, 'semanticCorrectnessVerified': False,
+            'reviewerIdentityAuthenticated': False,
+            'officialQuestionEvidenceAdded': 0, 'officialAnswerEvidenceAdded': 0,
+            'humanApproval': False, 'full408Acceptance': False}
 
 
 def audit(root: Path, evidence_path: Path) -> dict:
@@ -303,6 +491,9 @@ def audit(root: Path, evidence_path: Path) -> dict:
                               'examYear': question['examYear'], 'subjectId': question['subjectId'],
                               'questionNumber': question.get('questionNumber'),
                               'officialFullItemEvidenceAccounted': identity == 'official-full-text-verified'})
+    secondary_execution = None
+    if 'secondaryCandidateExecution' in doc:
+        secondary_execution = audit_secondary_execution(root, doc['secondaryCandidateExecution'], pin)
     for binding in bindings.values():
         if hashlib.sha256(inside(root, binding['path']).read_bytes()).hexdigest() != binding['sha256']:
             raise ValueError('input snapshot drift during exam evidence audit: ' + binding['path'])
@@ -313,6 +504,7 @@ def audit(root: Path, evidence_path: Path) -> dict:
             'generatedAt': datetime.now(timezone.utc).isoformat(), 'inputs': bindings,
             'generator': {'script': 'scripts/audit_exam_evidence.py',
                           'sha256': GENERATOR_SHA256},
+            'secondaryCandidateExecution': secondary_execution,
             'sourceCounts': dict(Counter(source['evidenceLevel'] for source in sources.values())),
             'officialRequirementCount': len(requirement_map) if requirements is not None else None,
             'officialRequirementInventoryComplete': complete,
@@ -328,7 +520,8 @@ def audit(root: Path, evidence_path: Path) -> dict:
             'limits': ['This checks captured local evidence bindings and declared provenance, not digital authenticity.',
                        'Book metadata and contents pages do not establish clause text or complete paper questions.',
                        'Mapping and official question identity are separate from independently solving each question.',
-                       'Missing official annual text leaves requirement counts and coverage null.']}
+                       'Missing official annual text leaves requirement counts and coverage null.',
+                       'Execution attachments verify captured bytes and declarations only; no code rerun or semantic/official approval.']}
 
 
 def main(argv=None) -> int:
@@ -347,7 +540,7 @@ def main(argv=None) -> int:
                 stream.write('\n')
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
-    except (ValueError, KeyError, TypeError, OSError) as exc:
+    except (ValueError, KeyError, TypeError, OSError, RecursionError) as exc:
         print(json.dumps({'verified': False, 'error': str(exc)}, ensure_ascii=False))
         return 1
 

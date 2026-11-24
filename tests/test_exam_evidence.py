@@ -399,5 +399,393 @@ class ExamEvidenceTests(unittest.TestCase):
         self.assertEqual(audit(self.root, self.path)['generator']['sha256'], expected)
 
 
+    def secondary_execution_fixture(self):
+        """Synthetic attachment only: no copied private card or compiler run."""
+        def blob(name, raw):
+            path = self.root / ('.cache/evidence/execution-' + name)
+            path.write_bytes(raw)
+            return {'path': path.relative_to(self.root).as_posix(),
+                    'sha256': hashlib.sha256(raw).hexdigest()}
+        def document(name, value):
+            return blob(name, json.dumps(value).encode())
+        candidate = document('candidate.json', {'schema': 'codebrick-curated-article',
+                             'version': 1, 'cards': []})
+        runner = blob('runner.py', b'# Synthetic runner; not executed.\n')
+        harness = blob('harness.c', b'/* Synthetic harness; not compiled. */\n')
+        stdout = blob('stdout.txt', b'synthetic-output\n')
+        basis = document('basis.json', {'schema': 'codebrick-secondary-item-transcription',
+                         'version': 1, 'provenanceStatus': 'secondary-unverified',
+                         'officialAuthorityVerified': False,
+                         'transcription': 'Synthetic secondary question basis.'})
+        execution = {'schema': 'codebrick-local-candidate-execution', 'version': 1,
+                     'candidate': candidate, 'runner': runner, 'totalCases': 2,
+                     'results': [{'cases': 2, 'harness': harness['path'],
+                                  'harnessSha256': harness['sha256'],
+                                  'stdout': stdout['path'], 'stdoutSha256': stdout['sha256']}],
+                     'humanApproval': False, 'fullArticleApproved': False,
+                     'overall408Acceptance': False}
+        execution_binding = document('report.json', execution)
+        review = {'schema': 'codebrick-q42-code-execution-independent-review', 'version': 2,
+                  'candidate': copy.deepcopy(candidate), 'execution': copy.deepcopy(execution_binding),
+                  'reviewer': {'kind': 'ai', 'name': 'synthetic-nonauthor',
+                               'independentOfExecutionEvidenceAuthor': True,
+                               'humanApproval': False},
+                  'decision': 'PASS_WITH_LIMITATION_FINAL_STATE_ONLY',
+                  'questionBasis': {**basis, 'status': 'secondary-unverified',
+                                    'officialQuestionEvidenceCountAdded': 0,
+                                    'officialAnswerEvidenceCountAdded': 0},
+                  'inputs': [candidate, execution_binding, runner, harness, stdout, basis]}
+        review_binding = document('review.json', review)
+        self.doc['secondaryCandidateExecution'] = {
+            'candidate': candidate, 'execution': execution_binding,
+            'independentReview': review_binding, 'scope': 'Synthetic local byte check only',
+            'officialQuestionEvidenceAdded': 0, 'officialAnswerEvidenceAdded': 0,
+            'notOfficialAnswer': True, 'notWholeCardReview': True}
+        self.save()
+        return execution, review
+
+    def save_secondary_reports(self, execution, review):
+        attachment = self.doc['secondaryCandidateExecution']
+        old = copy.deepcopy(attachment['execution'])
+        path = self.root / old['path']
+        path.write_text(json.dumps(execution), encoding='utf-8')
+        attachment['execution']['sha256'] = hashlib.sha256(path.read_bytes()).hexdigest()
+        review['inputs'] = [copy.deepcopy(attachment['execution']) if b == old else b
+                            for b in review['inputs']]
+        if review.get('execution') == old:
+            review['execution'] = copy.deepcopy(attachment['execution'])
+        path = self.root / attachment['independentReview']['path']
+        path.write_text(json.dumps(review), encoding='utf-8')
+        attachment['independentReview']['sha256'] = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.save()
+
+    def test_secondary_attachment_optional_absent_and_present_is_not_approval(self):
+        self.assertIsNone(audit(self.root, self.path)['secondaryCandidateExecution'])
+        self.secondary_execution_fixture()
+        result = audit(self.root, self.path)
+        claim = result['secondaryCandidateExecution']
+        self.assertTrue(claim['attachmentBindingsVerified'])
+        self.assertEqual(claim['declaredCases'], 2)
+        self.assertFalse(claim['executionRerun'])
+        self.assertFalse(claim['semanticCorrectnessVerified'])
+        self.assertFalse(claim['reviewerIdentityAuthenticated'])
+        self.assertEqual(result['officialQuestionEvidenceCount'], 0)
+        self.assertIsNone(result['officialMappingCoverage'])
+        self.assertFalse(result['full408Acceptance'])
+        self.assertTrue(any('secondaryExecution:' in k for k in result['inputs']))
+
+    def test_secondary_attachment_report_and_candidate_tampering_rejected(self):
+        for field in ('candidate', 'execution', 'independentReview'):
+            with self.subTest(field=field):
+                self.secondary_execution_fixture()
+                target = self.root / self.doc['secondaryCandidateExecution'][field]['path']
+                target.write_bytes(target.read_bytes() + b' ')
+                with self.assertRaisesRegex(ValueError, 'stale secondary execution'):
+                    audit(self.root, self.path)
+
+    def test_secondary_attachment_artifact_tampering_rejected(self):
+        for field in ('runner', 'harness', 'stdout', 'questionBasis'):
+            with self.subTest(field=field):
+                execution, review = self.secondary_execution_fixture()
+                path = (execution['runner']['path'] if field == 'runner' else
+                        review['questionBasis']['path'] if field == 'questionBasis' else
+                        execution['results'][0][field])
+                (self.root / path).write_bytes(b'tampered')
+                with self.assertRaisesRegex(ValueError, 'stale secondary execution'):
+                    audit(self.root, self.path)
+
+    def test_secondary_attachment_nonofficial_fields_are_strict(self):
+        for field, value in [('officialQuestionEvidenceAdded', 1),
+                             ('officialAnswerEvidenceAdded', False),
+                             ('notOfficialAnswer', 1), ('notWholeCardReview', False),
+                             ('scope', ' ')]:
+            with self.subTest(field=field, value=value):
+                self.secondary_execution_fixture()
+                self.doc['secondaryCandidateExecution'][field] = value
+                self.save()
+                with self.assertRaisesRegex(ValueError, 'non-official boundaries'):
+                    audit(self.root, self.path)
+
+    def test_secondary_attachment_unknown_null_or_incomplete_rejected(self):
+        for value in (None, {}, [], {'unknown': True}):
+            self.doc['secondaryCandidateExecution'] = value
+            self.save()
+            with self.assertRaisesRegex(ValueError, 'fields are incomplete or unknown'):
+                audit(self.root, self.path)
+
+    def test_secondary_attachment_report_must_bind_same_candidate(self):
+        execution, review = self.secondary_execution_fixture()
+        execution['candidate'] = copy.deepcopy(execution['runner'])
+        self.save_secondary_reports(execution, review)
+        with self.assertRaisesRegex(ValueError, 'schemas or candidate linkage'):
+            audit(self.root, self.path)
+
+    def test_secondary_attachment_review_must_bind_same_execution(self):
+        execution, review = self.secondary_execution_fixture()
+        review['inputs'] = [b for b in review['inputs'] if b != self.doc['secondaryCandidateExecution']['execution']]
+        self.save_secondary_reports(execution, review)
+        with self.assertRaisesRegex(ValueError, 'must bind the same candidate and execution'):
+            audit(self.root, self.path)
+
+    def test_secondary_attachment_cannot_grant_approval(self):
+        for field in ('humanApproval', 'fullArticleApproved', 'overall408Acceptance'):
+            execution, review = self.secondary_execution_fixture()
+            execution[field] = True
+            self.save_secondary_reports(execution, review)
+            with self.assertRaisesRegex(ValueError, 'cannot grant approval'):
+                audit(self.root, self.path)
+
+    def test_secondary_attachment_reviewer_independence_is_explicit_declaration(self):
+        for field, value in [('name', ' '), ('kind', 'human'),
+                             ('independentOfExecutionEvidenceAuthor', 'true'),
+                             ('humanApproval', True)]:
+            execution, review = self.secondary_execution_fixture()
+            review['reviewer'][field] = value
+            self.save_secondary_reports(execution, review)
+            with self.assertRaisesRegex(ValueError, 'reviewer declaration|cannot grant approval'):
+                audit(self.root, self.path)
+
+    def test_secondary_attachment_case_totals_must_be_integer_consistent(self):
+        for cases, total in [(True, 1), (0, 0), (2, 3), (2, True)]:
+            execution, review = self.secondary_execution_fixture()
+            execution['results'][0]['cases'] = cases
+            execution['totalCases'] = total
+            self.save_secondary_reports(execution, review)
+            with self.assertRaisesRegex(ValueError, 'case count'):
+                audit(self.root, self.path)
+
+    def test_secondary_attachment_basis_cannot_be_promoted_to_official(self):
+        execution, review = self.secondary_execution_fixture()
+        review['questionBasis']['status'] = 'official-full-text-verified'
+        self.save_secondary_reports(execution, review)
+        with self.assertRaisesRegex(ValueError, 'must remain secondary'):
+            audit(self.root, self.path)
+
+    def test_secondary_attachment_postread_artifact_drift_rejected(self):
+        execution, review = self.secondary_execution_fixture()
+        original = evidence_tool.audit_secondary_execution
+        def changed_after_audit(root, attachment, pin):
+            result = original(root, attachment, pin)
+            (root / execution['results'][0]['stdout']).write_bytes(b'late drift')
+            return result
+        with patch.object(evidence_tool, 'audit_secondary_execution', side_effect=changed_after_audit):
+            with self.assertRaisesRegex(ValueError, 'snapshot drift during exam evidence'):
+                audit(self.root, self.path)
+
+    def test_secondary_attachment_rejects_unknown_fields_and_outside_paths(self):
+        self.secondary_execution_fixture()
+        self.doc['secondaryCandidateExecution']['claimOfficial'] = True
+        self.save()
+        with self.assertRaisesRegex(ValueError, 'fields are incomplete or unknown'):
+            audit(self.root, self.path)
+        execution, review = self.secondary_execution_fixture()
+        review['inputs'].append({'path': '../outside-private.txt', 'sha256': '0' * 64})
+        self.save_secondary_reports(execution, review)
+        with self.assertRaisesRegex(ValueError, 'path outside project'):
+            audit(self.root, self.path)
+
+
+    def test_secondary_review_targets_must_match_even_if_input_list_is_correct(self):
+        for field in ('candidate', 'execution'):
+            execution, review = self.secondary_execution_fixture()
+            review[field] = copy.deepcopy(execution['runner'])
+            self.save_secondary_reports(execution, review)
+            with self.assertRaisesRegex(ValueError, 'declares a different target'):
+                audit(self.root, self.path)
+            execution, review = self.secondary_execution_fixture()
+            review.pop(field)
+            self.save_secondary_reports(execution, review)
+            with self.assertRaisesRegex(ValueError, 'declares a different target'):
+                audit(self.root, self.path)
+
+    def test_secondary_review_v1_without_explicit_targets_is_not_implicitly_accepted(self):
+        execution, review = self.secondary_execution_fixture()
+        review['version'] = 1
+        review.pop('candidate')
+        review.pop('execution')
+        self.save_secondary_reports(execution, review)
+        with self.assertRaisesRegex(ValueError, 'schemas or candidate linkage'):
+            audit(self.root, self.path)
+
+    def test_secondary_question_basis_cannot_reuse_executable_or_report_artifact(self):
+        for field in ('runner', 'execution', 'candidate'):
+            execution, review = self.secondary_execution_fixture()
+            binding = execution['runner'] if field == 'runner' else self.doc['secondaryCandidateExecution'][field]
+            review['questionBasis'].update(copy.deepcopy(binding))
+            self.save_secondary_reports(execution, review)
+            with self.assertRaisesRegex(ValueError, 'distinct transcription'):
+                audit(self.root, self.path)
+
+    def test_secondary_question_basis_needs_review_input_and_transcription_schema(self):
+        execution, review = self.secondary_execution_fixture()
+        old = {k: review['questionBasis'][k] for k in ('path', 'sha256')}
+        review['inputs'] = [b for b in review['inputs'] if b != old]
+        self.save_secondary_reports(execution, review)
+        with self.assertRaisesRegex(ValueError, 'must be bound by review inputs'):
+            audit(self.root, self.path)
+        execution, review = self.secondary_execution_fixture()
+        old = {k: review['questionBasis'][k] for k in ('path', 'sha256')}
+        path = self.root / old['path']
+        path.write_text(json.dumps({'schema': 'not-a-question', 'transcription': 'unrelated'}), encoding='utf-8')
+        updated = {**old, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+        review['questionBasis'].update(updated)
+        review['inputs'] = [updated if b == old else b for b in review['inputs']]
+        self.save_secondary_reports(execution, review)
+        with self.assertRaisesRegex(ValueError, 'needs a secondary transcription document'):
+            audit(self.root, self.path)
+
+    def test_secondary_reports_reject_conflicting_and_unknown_claims(self):
+        for target, field, value in [('review', 'humanApproval', True),
+                                      ('review', 'fullArticleApproved', True),
+                                      ('review', 'overall408Acceptance', True),
+                                      ('execution', 'officialQuestionEvidenceCountAdded', 99),
+                                      ('execution', 'officialAnswerEvidenceCountAdded', True),
+                                      ('execution', 'officialQuestionEvidenceAdded', 99),
+                                      ('execution', 'notOfficialAnswer', False),
+                                      ('execution', 'notWholeCardReview', False),
+                                      ('review', 'unexpectedClaim', True)]:
+            execution, review = self.secondary_execution_fixture()
+            (review if target == 'review' else execution)[field] = value
+            self.save_secondary_reports(execution, review)
+            with self.assertRaisesRegex(ValueError, 'cannot grant approval|unknown fields'):
+                audit(self.root, self.path)
+        for target, field in [('reviewer', 'humanApproval'), ('author', 'overall408Acceptance')]:
+            execution, review = self.secondary_execution_fixture()
+            if target == 'reviewer': review['reviewer'][field] = True
+            else: execution['author'] = {field: True}
+            self.save_secondary_reports(execution, review)
+            with self.assertRaisesRegex(ValueError, 'cannot grant approval'):
+                audit(self.root, self.path)
+
+    def test_secondary_deep_json_is_validation_error_and_cli_returns_structured_failure(self):
+        import contextlib
+        import io
+        for field in ('candidate', 'execution', 'independentReview'):
+            for depth in (70, 3000):
+                self.secondary_execution_fixture()
+                attachment = self.doc['secondaryCandidateExecution']
+                binding = attachment[field]
+                raw = b'[' * depth + b'0' + b']' * depth
+                (self.root / binding['path']).write_bytes(raw)
+                binding['sha256'] = hashlib.sha256(raw).hexdigest()
+                self.save()
+                with self.assertRaisesRegex(ValueError, 'JSON depth'):
+                    audit(self.root, self.path)
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    status = evidence_tool.main(['--root', str(self.root), '--evidence', str(self.path)])
+                self.assertEqual(status, 1)
+                self.assertIs(json.loads(out.getvalue())['verified'], False)
+
+    def test_secondary_artifact_size_limit_rejects_before_json_parsing(self):
+        self.secondary_execution_fixture()
+        binding = self.doc['secondaryCandidateExecution']['candidate']
+        raw = b' ' * (16 * 1024 * 1024 + 1)
+        (self.root / binding['path']).write_bytes(raw)
+        binding['sha256'] = hashlib.sha256(raw).hexdigest()
+        self.save()
+        with self.assertRaisesRegex(ValueError, 'exceeds 16 MiB'):
+            audit(self.root, self.path)
+
+
+    def rewrite_secondary_fixture_json(self, field, original, replacement):
+        """Mutate raw bytes and refresh all parent bindings without decoding them."""
+        attachment = self.doc['secondaryCandidateExecution']
+        execution_path = self.root / attachment['execution']['path']
+        review_path = self.root / attachment['independentReview']['path']
+        execution = json.loads(execution_path.read_bytes())
+        review = json.loads(review_path.read_bytes())
+        binding = (review['questionBasis'] if field == 'questionBasis'
+                   else attachment[field])
+        old = {key: binding[key] for key in ('path', 'sha256')}
+        path = self.root / old['path']
+        raw = path.read_bytes()
+        changed = raw.replace(original, replacement, 1)
+        self.assertNotEqual(changed, raw, 'raw JSON mutation anchor missing: ' + field)
+        path.write_bytes(changed)
+        new = {**old, 'sha256': hashlib.sha256(changed).hexdigest()}
+        if field == 'independentReview':
+            attachment[field] = new
+        else:
+            review['inputs'] = [new if item == old else item for item in review['inputs']]
+            if field == 'candidate':
+                attachment['candidate'] = new
+                execution['candidate'] = new
+                review['candidate'] = new
+                self.save_secondary_reports(execution, review)
+                return
+            if field == 'execution':
+                attachment['execution'] = new
+                review['execution'] = new
+            else:
+                review['questionBasis'].update(new)
+            review_path.write_text(json.dumps(review), encoding='utf-8')
+            attachment['independentReview']['sha256'] = hashlib.sha256(review_path.read_bytes()).hexdigest()
+        self.save()
+
+    def test_secondary_json_duplicate_keys_rejected_in_all_report_documents(self):
+        cases = [
+            ('candidate', b'"schema": "codebrick-curated-article"',
+             b'"schema":"wrong","schema":"codebrick-curated-article"'),
+            ('execution', b'"humanApproval": false',
+             b'"humanApproval":true,"humanApproval":false'),
+            ('independentReview', b'"humanApproval": false',
+             b'"humanApproval":true,"humanApproval":false'),
+            ('independentReview', b'"humanApproval": false',
+             b'"humanApproval":true,"human\\u0041pproval":false'),
+            ('independentReview', b'"reviewer": {',
+             b'"reviewer":{"nested":{"humanApproval":true,"humanApproval":false},'),
+            ('questionBasis', b'"provenanceStatus": "secondary-unverified"',
+             b'"provenanceStatus":"official","provenanceStatus":"secondary-unverified"'),
+            ('questionBasis', b'"officialAuthorityVerified": false',
+             b'"officialAuthorityVerified":true,"officialAuthorityVerified":false'),
+        ]
+        for field, original, replacement in cases:
+            with self.subTest(field=field, replacement=replacement):
+                self.secondary_execution_fixture()
+                self.rewrite_secondary_fixture_json(field, original, replacement)
+                with self.assertRaisesRegex(ValueError, 'duplicate secondary execution JSON key'):
+                    audit(self.root, self.path)
+
+    def test_secondary_json_nonstandard_numeric_constants_rejected(self):
+        cases = [(value, 'non-standard secondary execution JSON constant')
+                 for value in (b'NaN', b'Infinity', b'-Infinity')]
+        cases += [(value, 'non-finite secondary execution JSON number')
+                  for value in (b'1e999', b'-1e999')]
+        for value, error in cases:
+            with self.subTest(value=value):
+                self.secondary_execution_fixture()
+                self.rewrite_secondary_fixture_json(
+                    'independentReview', b'"reviewer": {',
+                    b'"metric":' + value + b',"reviewer":{')
+                with self.assertRaisesRegex(ValueError, error):
+                    audit(self.root, self.path)
+
+    def test_secondary_attachment_raw_json_constant_and_duplicate_keys_fail_cli(self):
+        import contextlib
+        import io
+        cases = [
+            ('candidate', b'"schema": "codebrick-curated-article"',
+             b'"schema":"wrong","schema":"codebrick-curated-article"'),
+            ('execution', b'"humanApproval": false',
+             b'"humanApproval":true,"humanApproval":false'),
+            ('independentReview', b'"humanApproval": false',
+             b'"humanApproval":true,"humanApproval":false'),
+            ('questionBasis', b'"officialAuthorityVerified": false',
+             b'"officialAuthorityVerified":true,"officialAuthorityVerified":false'),
+            ('independentReview', b'"reviewer": {', b'"metric":NaN,"reviewer":{'),
+            ('independentReview', b'"reviewer": {', b'"metric":1e999,"reviewer":{'),
+        ]
+        for field, original, replacement in cases:
+            with self.subTest(field=field, replacement=replacement):
+                self.secondary_execution_fixture()
+                self.rewrite_secondary_fixture_json(field, original, replacement)
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    status = evidence_tool.main(['--root', str(self.root), '--evidence', str(self.path)])
+                self.assertEqual(status, 1)
+                self.assertIs(json.loads(output.getvalue())['verified'], False)
+
+
 if __name__ == '__main__':
     unittest.main()
