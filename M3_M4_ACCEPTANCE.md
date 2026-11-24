@@ -466,3 +466,8 @@ CO存储器概述r3作者版本SHA `c16ea9b0f574eefc8f3bf398e55b9e9ce3367b1ba375
 - r53逐科范围快照：`4b316a5d0c2fc1dde92240af2186d613a0b8452d3915c522d5cfa5306733aae3`。
 - CO存储器概述r3独立全卡报告：`c95c800828927754f4f49d69d4e8fcf0b3a2314257b32ebe7730bfc68e8df3f2`。
 - 标签独立代码审报告（包含实测运行环境）：`6ac1af466bdb6947cac4a01586c91151b113b10bc1167bb906aecb03891d6978`。
+from pathlib import Path
+import re
+p=Path('M3_M4_ACCEPTANCE.md');s=p.read_text(encoding='utf-8')
+s += '''\n\n## r64—r65：DS链栈、OS同步概念独立复评\n\n链栈作者版本全卡AI独立复评为19P/5U/0F（24卡），OS同步概念为31P/2U/0F（33卡）。r64以r63为基底纳链栈：39篇/348、902P/18U/0F、309篇批外；r65再纳OS同步概念：40篇/348、933P/20U/0F、308篇批外。均为仅候选卡面、非全文批准。链栈5项U集中在free(NULL)的C标准证据、结构体ABI/分配器前提、size_t/SIZE_MAX契约、栈ADT接口边界及动态顺序栈/扩容范围；OS同步概念2项U涉及吞吐改善前提和“必须共用同一把锁”的过强通则。两篇r2作者返修分别已派给非评委作者，后续必须以新SHA全卡复评，旧P不继承。\n\nCO I/O概述r2复评当前仍12P；r3作者修订待交非作者复审。OS目录复评尚无落盘报告，不计r65。累计账仍有不同文章的全文缺口、deferred能力及批外文章，未达到M3全站闭环。\n\n- r65累计审计SHA-256：`9cfb5ea8b3591dc41cbbd1235bd6f0b4266b2ed7b68ddadab0de968ccb749f9f`\n- r54逐科范围快照SHA-256：`edf35a7a631d9af236010152c6e7204b689b169a5b455bf147537eec98e77483`\n'''
+p.write_text(s,encoding='utf-8')
