@@ -296,6 +296,48 @@ class ContentBatchTests(unittest.TestCase):
         self.save()
         self.assertEqual(audit(self.root, self.batch_rel)['summary']['cardDecisions'], {'PASS': 1})
 
+    def test_known_nested_approval_flag_must_be_exact_false(self):
+        for value in (True, 1, None, 'false'):
+            self.review['reviewer']['full408Acceptance'] = value
+            self.save()
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'cannot claim approval'):
+                audit(self.root, self.batch_rel)
+        self.review['reviewer']['full408Acceptance'] = False
+        self.save()
+        self.assertEqual(audit(self.root, self.batch_rel)['humanApprovalsGenerated'], 0)
+
+    def test_reviewer_approval_fields_cannot_contradict_top_level(self):
+        for flag in ('contentApproved', 'fullArticleApproved',
+                     'overall408Acceptance', 'full408Acceptance'):
+            self.review['reviewer'][flag] = True
+            self.save()
+            with self.subTest(flag=flag), self.assertRaisesRegex(ValueError, 'cannot claim approval'):
+                audit(self.root, self.batch_rel)
+            self.review['reviewer'][flag] = False
+
+    def test_nonclosed_issue_statuses_require_both_source_aliases(self):
+        original = self.fixture.authored_proposal()
+        uid = self.fixture.units[1]['knowledgeUnitId']
+        primary = original['cards'][0]
+        self.review['cards'][0].update(id=primary['id'],
+            questionSha256=text_sha(primary['question']),
+            answerSha256=text_sha(primary['answer']), unitIds=primary['unitIds'])
+        for status in ('OPEN', 'unresolved', 'open-source-conflict', 'awaiting-evidence'):
+            proposal = copy.deepcopy(original)
+            proposal['issues'] = [{'status': status, 'unitIds': [], 'knowledgeUnitIds': [uid]}]
+            self.write(self.rel, proposal)
+            self.review['candidate']['sha256'] = self.sha(self.rel)
+            self.batch['entries'][0]['candidateSha256'] = self.sha(self.rel)
+            self.review['missingCoverage']['unitIds'] = []
+            self.review['missingCoverage']['sectionIndices'] = []
+            self.save()
+            with self.subTest(status=status), self.assertRaisesRegex(ValueError, 'open-issue units'):
+                audit(self.root, self.batch_rel)
+            self.review['missingCoverage']['unitIds'] = [uid]
+            self.review['missingCoverage']['sectionIndices'] = [self.fixture.units[1]['sectionIndex']]
+            self.save()
+            self.assertEqual(audit(self.root, self.batch_rel)['summary']['cardDecisions'], {'PASS': 1})
+
     def test_identity_aliases_and_generic_labels(self):
         check = batch_tool.reject_declared_self_review
         for author, reviewer in [({'agentId': 'agent-001'}, {'threadId': ' AGENT-001 '}),

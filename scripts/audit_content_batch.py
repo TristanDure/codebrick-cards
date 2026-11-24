@@ -142,10 +142,11 @@ def audit(root: Path, batch_path: Path) -> dict:
                     or not isinstance(reviewer.get('name'), str) or not reviewer['name'].strip()):
                 raise ValueError('review must declare non-author AI identity; not human approval')
             reject_declared_self_review(proposal.get('author', {}), reviewer)
-            for flag in ('humanApproval', 'contentApproved', 'fullArticleApproved',
-                         'overall408Acceptance', 'full408Acceptance'):
-                if flag in review and review[flag] is not False:
-                    raise ValueError('AI card review cannot claim approval: ' + flag)
+            for holder in (review, reviewer):
+                for flag in ('humanApproval', 'contentApproved', 'fullArticleApproved',
+                             'overall408Acceptance', 'full408Acceptance'):
+                    if flag in holder and holder[flag] is not False:
+                        raise ValueError('AI card review cannot claim approval: ' + flag)
             if not isinstance(review.get('reviewedAt'), str):
                 raise ValueError('reviewedAt must be an ISO timestamp with timezone')
             date = datetime.fromisoformat(review['reviewedAt'].replace('Z', '+00:00'))
@@ -190,10 +191,19 @@ def audit(root: Path, batch_path: Path) -> dict:
                 raise ValueError('missing coverage must list unique source unit IDs')
             failed_units = {uid for card, result in zip(candidate_cards, review_cards)
                             if result['decision'] != 'PASS' for uid in card['knowledgeUnitIds']}
-            open_issue_units = {uid for issue in proposal.get('issues', [])
-                                if issue.get('status') == 'open'
-                                for key in ('unitIds', 'knowledgeUnitIds')
-                                for uid in issue.get(key, [])}
+            open_issue_units = set()
+            for issue in proposal.get('issues', []):
+                # Match the importer: all states except explicitly closed/resolved
+                # remain evidence gaps. Unknown states cannot silently close them.
+                if issue.get('status') in ('closed', 'resolved'):
+                    continue
+                for key in ('unitIds', 'knowledgeUnitIds'):
+                    issue_ids = issue.get(key, [])
+                    if (not isinstance(issue_ids, list)
+                            or any(not isinstance(uid, str) or uid not in source_ids
+                                   for uid in issue_ids)):
+                        raise ValueError('open issue source IDs must be a list of known units')
+                    open_issue_units.update(issue_ids)
             required_missing = unresolved | failed_units | open_issue_units
             if not set(missing_ids) <= source_ids or not required_missing <= set(missing_ids):
                 raise ValueError('missing coverage omits unresolved/failed/open-issue units or includes unknown units')

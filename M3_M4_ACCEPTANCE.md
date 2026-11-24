@@ -743,3 +743,15 @@ r96累计52/348篇、**1,388P/86U/3F**，296篇批外。累计SHA `7d35283548bd1
 CO「总线概述」39卡，AI评委Peirce（非作者Raman）判27P/11U/1F。卡023 FAIL：把平均吞吐低于峰值的原因写成“必有非数据开销”；即使零额外开销，数据阶段本身低于峰值也可导致严格小于，必要条件不成立。11项UNPROVEN涉及公式变量定义、同步/异步具体握手、设备负载电气边界、峰值/吞吐术语、突发增益和串并行链路约束等来源扩写。审计绑定133来源单元/13节，74映射单元、59未映射，缺口96单元。
 
 r97累计53/348篇、**1,415P/97U/4F**，295篇批外。SHA：累计`8232326ceaf4c351e7553c5d7943cd81b7e2ed2a48011a8533cba45613c33bcf`；审计`70db5e606c02ea9245d29203e76a736593f2f581ab8c3887ace472e7df99a534`；r78范围`e186d191d2ef5c0f4f2e81c008ec126ea3fb01ac52dfe23b558963850e7a7887`。FAIL需返修后交非作者复审。
+
+
+### r97审计护栏纠正记录（未重算全量分母）
+
+独立复核器在r93代码/试用池检查中报告两项漏检：G1将候选issue与评分schema状态区别开来，`audit_content_batch.py`先前仅将精确`open`计为缺口，而导入器允许`resolved-by-author`等状态；这会漏掉未关闭issue。G2指出reviewer子对象可携带与review顶层冲突的已知批准字段。两项均已新增回归测试并在未改区块上定点修复；完整全量Python/Node套件和重新生成M2台账尚待复跑。
+
+按新的非`closed`/`resolved`缺口规则，r97旧批次重审仍失败：历史review缺失多个 `resolved-by-author`/`unresolved` issue单元。已在四份原review旁另建 `*-gap-correction-r1.json` 纠正副本（不覆盖原件），补入相应unit与section缺口；逐卡PASS/UNPROVEN/FAIL不变。这些是来源缺口台账更正，不是人工或语义复审。**r97旧累计与范围快照暂不作为当前有效快照；r98已从r96的纠正review副本重新audit/merge。逐卡计数不变，因这次是缺口审计纠正，没有重作内容判定。**
+
+
+### r98 gap-corrected cumulative audit
+
+M3审计防线修复后，r96原批也必须引用四份gap-corrected副本（OS上下文切换、CO类型转换、DS循环队列、DS双链表r2），补齐`resolved-by-author`/`unresolved` issue中的source IDs。新r96基线与r97 CO总线新增记录重新通过审计；逐卡分数不变。r98为53篇、1,415P/97U/4F、295篇批外。累计SHA `d81c8bc785ea7687bceb7239dd8bd7524309c85a961afd72e73338a2f481dffc`；audit `a62f9459d8d68639e20506cba6ac45e32b2d820841aa49492a96555eaa47963b`；r79 scope `86e97a08d07bde64bde90ca26787d7054173a58566f90560d79fb31d39013ec0`。历史r97及其原评审保留但不再作为当前引用快照；原报告未覆盖已更正的issue处置范围，纠正副本明确记录完整缺口。
