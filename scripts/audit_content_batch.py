@@ -29,6 +29,32 @@ def text_sha(text: str) -> str:
     return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
 
+def reject_declared_self_review(author: dict, reviewer: dict) -> None:
+    """Reject explicit identity collisions, without authenticating any identity.
+
+    Historical candidates may lack identity metadata, and generic labels such as
+    Codex are not unique people/agents. Absence of a collision proves nothing.
+    """
+    if not isinstance(author, dict):
+        return
+    def values(record: dict, fields: tuple[str, ...]) -> set[str]:
+        return {record[key].strip().casefold() for key in fields
+                if isinstance(record.get(key), str) and record[key].strip()}
+    ids = ('agentId', 'threadId')
+    if values(author, ids) & values(reviewer, ids):
+        raise ValueError('declared author/reviewer identity collision; self-review is not independent')
+    generic = {'ai', 'codex', 'openai', 'assistant', 'unknown'}
+    labels = ('agent', 'name')
+    author_labels = values(author, labels) - generic
+    reviewer_labels = values(reviewer, labels) - generic
+    if author_labels & reviewer_labels:
+        raise ValueError('declared author/reviewer identity collision; self-review is not independent')
+    for author_label in author_labels:
+        for reviewer_label in reviewer_labels:
+            if reviewer_label.startswith(author_label + '-'):
+                raise ValueError('declared author/reviewer identity collision; self-review is not independent')
+
+
 def audit(root: Path, batch_path: Path) -> dict:
     root = root.resolve()
     batch_path = inside(root, str(batch_path))
@@ -115,6 +141,11 @@ def audit(root: Path, batch_path: Path) -> dict:
                     or reviewer.get('role') != 'independent-non-author-reviewer'
                     or not isinstance(reviewer.get('name'), str) or not reviewer['name'].strip()):
                 raise ValueError('review must declare non-author AI identity; not human approval')
+            reject_declared_self_review(proposal.get('author', {}), reviewer)
+            for flag in ('humanApproval', 'contentApproved', 'fullArticleApproved',
+                         'overall408Acceptance', 'full408Acceptance'):
+                if flag in review and review[flag] is not False:
+                    raise ValueError('AI card review cannot claim approval: ' + flag)
             if not isinstance(review.get('reviewedAt'), str):
                 raise ValueError('reviewedAt must be an ISO timestamp with timezone')
             date = datetime.fromisoformat(review['reviewedAt'].replace('Z', '+00:00'))
@@ -160,7 +191,9 @@ def audit(root: Path, batch_path: Path) -> dict:
             failed_units = {uid for card, result in zip(candidate_cards, review_cards)
                             if result['decision'] != 'PASS' for uid in card['knowledgeUnitIds']}
             open_issue_units = {uid for issue in proposal.get('issues', [])
-                                if issue.get('status') == 'open' for uid in issue.get('unitIds', [])}
+                                if issue.get('status') == 'open'
+                                for key in ('unitIds', 'knowledgeUnitIds')
+                                for uid in issue.get(key, [])}
             required_missing = unresolved | failed_units | open_issue_units
             if not set(missing_ids) <= source_ids or not required_missing <= set(missing_ids):
                 raise ValueError('missing coverage omits unresolved/failed/open-issue units or includes unknown units')

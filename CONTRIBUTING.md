@@ -24,3 +24,9 @@ node --test tests/test_workbench_progress.cjs
 新执行复核使用`codebrick-q42-code-execution-independent-review` version 2：必须显式给出与父附件完全一致的`candidate`和`execution`绑定；题面依据须为单独的secondary transcription文档并列入复核inputs。旧version 1缺显式目标字段，不能静默推断或原地改写；另建新复核记录和新证据清单，保留历史。附件每文件上限16 MiB，解码后JSON深度上限64；深层/编码异常必须结构化失败，已知批准和官方计数字段不得在任意嵌套位置互相矛盾。
 
 附件JSON的每层对象拒绝重复键（包括转义后同名键），拒绝NaN、Infinity和超出有限浮点范围的数值。复核输入应使用不可覆盖的证据快照；若绑定仍会修改的工具源码，后续修改会使旧复核失效，必须另建新记录，不能只换SHA继续冒用旧评委声明。
+
+### 非作者评审声明检查
+
+`audit_content_batch.py`拒绝候选作者与评委明确声明的agentId/threadId碰撞或非通用名称碰撞，并拒绝评审显式携带非false的人工/内容/全文/408批准字段。历史可选字段缺失不生成批准。此护栏仅发现明显的声明矛盾；泛用名称、别名、缺失身份和伪造身份无法据此认证独立性，仍须由任务分工与证据链核对。
+
+开放issue的来源单元可以在`unitIds`或`knowledgeUnitIds`中声明，批次缺口校验取两者并集；别名不能用于绕过未覆盖范围记录。

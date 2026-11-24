@@ -176,6 +176,26 @@ class ContentBatchTests(unittest.TestCase):
         self.save()
         self.assertEqual(audit(self.root, self.batch_rel)['summary']['cardDecisions'], {'FAIL': 1})
 
+    def test_open_issue_knowledge_unit_alias_cannot_hide_missing_coverage(self):
+        proposal = self.fixture.authored_proposal()
+        uid = self.fixture.units[1]['knowledgeUnitId']
+        proposal['issues'] = [{'id': 'fixture-open-issue', 'status': 'open',
+                              'knowledgeUnitIds': [uid]}]
+        self.write(self.rel, proposal)
+        primary = proposal['cards'][0]
+        self.review['candidate']['sha256'] = self.sha(self.rel)
+        self.batch['entries'][0]['candidateSha256'] = self.sha(self.rel)
+        self.review['cards'][0].update(id=primary['id'],
+            questionSha256=text_sha(primary['question']),
+            answerSha256=text_sha(primary['answer']), unitIds=primary['unitIds'])
+        self.save()
+        with self.assertRaisesRegex(ValueError, 'open-issue units'):
+            audit(self.root, self.batch_rel)
+        self.review['missingCoverage']['unitIds'] = [uid]
+        self.review['missingCoverage']['sectionIndices'] = [self.fixture.units[1]['sectionIndex']]
+        self.save()
+        self.assertEqual(audit(self.root, self.batch_rel)['summary']['cardDecisions'], {'PASS': 1})
+
     def test_real_validation_followed_by_cache_mutation_is_rejected(self):
         cache = self.root / self.fixture.cache_relative
         original = batch_tool.curated._validate_proposal
@@ -233,6 +253,62 @@ class ContentBatchTests(unittest.TestCase):
             self.save()
             with self.assertRaisesRegex(ValueError, 'non-author AI identity'):
                 audit(self.root, self.batch_rel)
+
+    def test_any_explicit_approval_flag_must_be_false(self):
+        for flag in ('humanApproval', 'contentApproved', 'fullArticleApproved',
+                     'overall408Acceptance', 'full408Acceptance'):
+            for value in (True, 1, None, 'false'):
+                with self.subTest(flag=flag, value=value):
+                    self.review[flag] = value
+                    self.save()
+                    with self.assertRaisesRegex(ValueError, 'cannot claim approval'):
+                        audit(self.root, self.batch_rel)
+            self.review[flag] = False
+        self.save()
+        self.assertEqual(audit(self.root, self.batch_rel)['humanApprovalsGenerated'], 0)
+
+    def test_declared_self_review_is_rejected_even_with_independence_claim(self):
+        # Both supported candidate formats are exercised elsewhere; use the
+        # authored fixture here because legacy format has no author metadata.
+        proposal = self.fixture.authored_proposal()
+        # This candidate has different fixture IDs; update the exact bindings.
+        self.write(self.rel, proposal)
+        primary = proposal['cards'][0]
+        self.review['candidate']['sha256'] = self.sha(self.rel)
+        self.batch['entries'][0]['candidateSha256'] = self.sha(self.rel)
+        self.review['cards'][0].update(id=primary['id'],
+            questionSha256=text_sha(primary['question']),
+            answerSha256=text_sha(primary['answer']), unitIds=primary['unitIds'])
+        self.review['reviewer']['name'] = proposal['author']['agent']
+        self.save()
+        with self.assertRaisesRegex(ValueError, 'identity collision'):
+            audit(self.root, self.batch_rel)
+
+    def test_distinct_authored_review_still_passes(self):
+        proposal = self.fixture.authored_proposal()
+        self.write(self.rel, proposal)
+        primary = proposal['cards'][0]
+        self.review['candidate']['sha256'] = self.sha(self.rel)
+        self.batch['entries'][0]['candidateSha256'] = self.sha(self.rel)
+        self.review['cards'][0].update(id=primary['id'],
+            questionSha256=text_sha(primary['question']),
+            answerSha256=text_sha(primary['answer']), unitIds=primary['unitIds'])
+        self.save()
+        self.assertEqual(audit(self.root, self.batch_rel)['summary']['cardDecisions'], {'PASS': 1})
+
+    def test_identity_aliases_and_generic_labels(self):
+        check = batch_tool.reject_declared_self_review
+        for author, reviewer in [({'agentId': 'agent-001'}, {'threadId': ' AGENT-001 '}),
+                                 ({'name': 'Zeno'}, {'agent': ' zEnO '}),
+                                 ({'agent': 'Raman'}, {'name': 'Raman-independent-reviewer'})]:
+            with self.assertRaisesRegex(ValueError, 'identity collision'):
+                check(author, reviewer)
+        for author, reviewer in [({}, {'name': 'Zeno'}),
+                                 ({'name': 'Codex'}, {'name': 'codex'}),
+                                 ({'agentId': 'agent-001'}, {'agentId': 'agent-002'}),
+                                 ({'agent': 'Codex'}, {'name': 'Reviewer-Codex'}),
+                                 ({'name': 'Zeno'}, {'name': 'SeparateReviewer-Zeno'})]:
+            check(author, reviewer)  # no collision is not authenticated independence
 
     def test_generator_hash_is_pinned_when_module_is_loaded(self):
         expected = batch_tool.GENERATOR_SHA256
