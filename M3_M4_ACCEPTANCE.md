@@ -633,3 +633,9 @@ Peirce对Antigravity的CN传输媒体26卡独立首评：**9P/4U/13F**，全86�
 r83累计为48/348篇、**1,186P/23U/13F**、300篇批外；r66 scope核34,476活跃来源单元。CN传输媒体13F返修已分配作者，不得将失败候选纳入试用包。精选工作台仍固定r75的41篇960卡，与本累计分离。
 - r83累计审计SHA：`a8252eee01de612dc60583575fbe110c96ecae57806de4e8c44e7f079fe0fba2`；r66 scope SHA：`8ac51a5ea653295e0a4d268f8d013a104db50c5113308a9efd0f29e72b0af6d3`。
 - 静态链表报告SHA：`9b5e53b7328b0a48eaa8c4fe8fc30d36e534bced5d1e2e2d9b66b4f4baa01471`。
+
+
+## M2：旧r10空提取轴独立分层抽样（非全量语义闭环）
+
+Newton对已存忽略目录的r10旧账本按5个非零静态解释类分层，17个真实章节locator均从原HTML缓存重新解析：动态/图示4、章节归属4、真题子链接4、兄弟组件2/2全数、来源缺失/懒加载3；另外两个零总体类未伪造样本。所有样本均核对当前缓存SHA、内容哈希、证据元组和结构计数，与旧r10静态解释相符，结论`SAMPLED_STATIC_AXIS_MATCH_WITH_LIMITS`。范围仅对17条静态DOM解释轴做抽查，不是416空节逐项语义验收，不是闭环。账本仍416条`contentGapClosed=false`、待证，M2整份输入也未fresh重验：当前knowledge-units SHA与r10记录不同，因此不能称M2目标完成。旧r10中0 unexplained只表示解释存在，不是图示/真题/动态内容补齐。
+- 抽样报告SHA：`9ad4f4cdc92b4b1127d361a444fc39e4d11f48ccd3bd1bc86d1acde70a3d9372`；旧账本SHA `be4a1f381a22e54b4aace2e001b428bb0da4fa8bea005dde8f75e5ca457dcd1d`。
