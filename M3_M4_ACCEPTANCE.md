@@ -875,3 +875,10 @@ CN DNS首审103卡由非作者AI Zeno执行：**94 PASS / 9 UNPROVEN / 0 FAIL**�
 ### M4 acquisition handoff r2复核通过（仅该交接文本，2026-11-24）
 
 Peirce对作者修订r2另行独立逐项核对17点，**17 PASS / 0 UNPROVEN / 0 FAIL**，37个输入/快照SHA全部匹配，未新增官方题或答案；复审报告SHA `26d1aba1c3cbf49a549f1d21e136f509c98d7a80f9be484d1493bba30609eae7`，严格绑定handoff r2 JSON SHA `3e2c07e771430eea4c4202dcaca31a70a69a4a3182aa8640f1c4647c87d8bf97`及MD SHA `21fe89e053e64d29064e9199834b0a32a72168e868486a753cde03477c0742f3`。r2修复了r1日志绑定漂移与来源层级/2027预览/历史目录页码/版权许可/网络声明边界。评审只通过这份获取缺口交接记录自身的内部一致性及修订，不意味着已获得考纲、完成逐条映射、核实官方题，或证明M4完成。所有人工批准和408验收仍false；官方要求数null、官方真题0。
+
+
+## r109：CO性能指标r2复审保持六项缺证
+
+非作者AI评委Peirce对CO性能指标r2全56卡重新判断：50 PASS / 6 UNPROVEN / 0 FAIL，不继承r1分数。005/006/011/018/019/051的周期-脉宽、倍频、超标量、数据依赖/资源争用、IPC术语、KiB/kB定义证据仍不足；声明deferred不是来源补证。候选SHA `64e0e47235f5ee242d2d5efc640058d9b934bb0671e116f0091461d6036bcd99`；复审SHA `f2e6bf37f838ea23f6521ef81165dc2a1bb8527ed5623c468b93d232dc160857`。43单元未映射；missingCoverage 113单元/13节；15个候选问题仍未关闭。结构及字节校验不是语义、身份或人工认证。
+
+r109替换该篇旧版，累计仍56/348篇、1,640P/132U/0F、292篇批外；scope r89逐篇列来源缺口与当前绑定版本。r109 SHA `c1b08fdd6dbc835462e45f4c4e0e246ebc41817d0e7b31d54729fa138056b119`；audit SHA `4283ed4ec3a0106c5071b2354e6c337d28f676a8e5c35e57e26ce448357736c9`；scope r89 SHA `1ce685447792a9cf8ef27215f576a6329f4c37b2eaecc8a57c996b39efcd7e9e`。M4交接r2的17P只适用于交接记录；官方要求数仍null，官方原题证据0，所有人工/全站408批准false。
