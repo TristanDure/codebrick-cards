@@ -26,7 +26,7 @@ class ContentScopeSnapshotTests(unittest.TestCase):
         self.assertFalse(d['articleScopes'][0]['fullArticleApproved'])
         self.assertFalse(d['full408Acceptance'])
         self.assertEqual(d['humanApprovalsGenerated'], 0)
-        self.assertEqual(before, {p: p.read_bytes() for p in before})
+        self.assertEqual(before, {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()})
 
     def test_pending_version_is_not_reviewed_or_pass(self):
         e = self.f.batch['entries'][0]
@@ -157,12 +157,33 @@ class ContentScopeSnapshotTests(unittest.TestCase):
         self.assertEqual(result['corpus']['reviewedVersionArticles'], 3)
         self.assertEqual(result['corpus']['cardDecisions'],
                          {'PASS': 1, 'FAIL': 1, 'UNPROVEN': 1, 'UNREVIEWED': 1})
+        for subject, decision in [('os', 'PASS'), ('co', 'FAIL'),
+                                  ('cn', 'UNPROVEN'), ('ds', 'UNREVIEWED')]:
+            with self.subTest(subject=subject):
+                expected = {key: int(key == decision)
+                            for key in ('PASS', 'UNPROVEN', 'FAIL', 'UNREVIEWED')}
+                subject_scope = result['subjects'][subject]
+                self.assertEqual(subject_scope['decisions'], expected)
+                self.assertEqual(subject_scope['cards'], 1)
+                self.assertEqual(subject_scope['batchArticles'], 1)
+                self.assertEqual(subject_scope['reviewedVersionArticles'], int(subject != 'ds'))
+                self.assertEqual(subject_scope['activeSourceUnits'], 2)
+                self.assertEqual(subject_scope['articles'], 2 if subject == 'ds' else 1)
+                self.assertEqual(subject_scope['outsideBatchArticles'], int(subject == 'ds'))
+                article_scope, = [row for row in result['articleScopes']
+                                  if row['sourceId'] == subject]
+                self.assertEqual(article_scope['decisions'], {decision: 1})
+                expected_review = (None if subject == 'ds' else
+                                   self.f.review_rel if subject == 'os' else
+                                   f'data/_reviews/{subject}.json')
+                self.assertEqual(article_scope['reviewPath'], expected_review)
+                self.assertFalse(article_scope['fullArticleApproved'])
         self.assertEqual(result['subjects']['ds']['outsideBatchArticles'], 1)
         self.assertEqual(result['subjects']['ds']['reviewedVersionArticles'], 0)
         self.assertEqual(result['subjects']['ds']['activeSourceUnits'], 2)
         self.assertEqual(result['remainingArticlesOutsideBatch'][0]['url'], outside['url'])
         self.assertFalse(result['full408Acceptance'])
-        self.assertEqual(before, {p: p.read_bytes() for p in before})
+        self.assertEqual(before, {p: p.read_bytes() for p in self.root.rglob('*') if p.is_file()})
 
     def test_cli_new_output_only_and_outside_rejected(self):
         args = ['--root', str(self.root), '--batch', str(self.f.batch_rel),
