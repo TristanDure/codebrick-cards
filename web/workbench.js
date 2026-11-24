@@ -105,7 +105,7 @@
     byId("flip").disabled = !card;
     renderContent(byId("cardQuestion"), card?.question || "本筛选条件暂无候选卡片");
     renderContent(byId("cardAnswer"), card?.answer || "");
-    byId("cardKind").textContent = card?.pool === "curated" ? "精编候选 · 独立评审未通过或待审" : "机器候选 · 待语义核验";
+    byId("cardKind").textContent = !card ? "当前筛选无候选" : card.pool === "curated" ? "精编候选 · 未获内容批准" : "机器候选 · 待语义核验";
     byId("cardContext").textContent = card ? card.sections.map((number) => article.sections.find((s) => s.index === number)?.headingPath || "未定位章节").join(" / ") : "可切换章节或候选类型；没有卡片不代表没有知识点。";
     byId("assumptions").textContent = card?.assumptions.length ? "题面条件：" + card.assumptions.join("；") : "";
     byId("sourceNotes").textContent = card ? card.sourceNotes.join("；") : "";
