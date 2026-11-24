@@ -192,7 +192,10 @@ if ($Check) {
         curatedCards = $index.summary.curatedCandidates
         contentApproved = $index.contentApproved
         serverStarted = $false
-    } | ConvertTo-Json
+    } | ConvertTo-Json | ForEach-Object {
+        # Keep -Check output ASCII-only so callers do not depend on the console code page.
+        [regex]::Replace($_, '[^\x00-\x7F]', [System.Text.RegularExpressions.MatchEvaluator]{ param($m) ('\u{0:x4}' -f [int][char]$m.Value) })
+    }
     exit 0
 }
 Write-Host "Articles: $($index.summary.articles); curated candidates: $($index.summary.curatedCandidates)"
