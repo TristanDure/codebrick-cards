@@ -315,6 +315,22 @@ class ContentBatchTests(unittest.TestCase):
                 audit(self.root, self.batch_rel)
             self.review['reviewer'][flag] = False
 
+    def test_invalid_issue_unit_array_cannot_be_ignored(self):
+        for value in ('unit-id', None, {'id': 'unit-id'}):
+            proposal = self.fixture.authored_proposal()
+            proposal['issues'] = [{'status': 'open', 'unitIds': value,
+                                   'knowledgeUnitIds': [self.fixture.units[1]['knowledgeUnitId']]}]
+            self.write(self.rel, proposal)
+            primary = proposal['cards'][0]
+            self.review['candidate']['sha256'] = self.sha(self.rel)
+            self.batch['entries'][0]['candidateSha256'] = self.sha(self.rel)
+            self.review['cards'][0].update(id=primary['id'],
+                questionSha256=text_sha(primary['question']),
+                answerSha256=text_sha(primary['answer']), unitIds=primary['unitIds'])
+            self.save()
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'issue source IDs'):
+                audit(self.root, self.batch_rel)
+
     def test_nonclosed_issue_statuses_require_both_source_aliases(self):
         original = self.fixture.authored_proposal()
         uid = self.fixture.units[1]['knowledgeUnitId']
