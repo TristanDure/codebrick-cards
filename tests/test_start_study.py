@@ -216,6 +216,24 @@ class StartStudyTests(unittest.TestCase):
         self.assertEqual(info["project"], str(ROOT))
         self.assert_no_listener()
 
+    def test_check_unicode_project_round_trips_under_legacy_code_page(self):
+        copied = self.project / "start-study.ps1"
+        shutil.copyfile(LAUNCHER, copied)
+        script = ("[Console]::OutputEncoding = [Text.Encoding]::GetEncoding(936)\n"
+                  + "& " + ps_quote(copied) + " -Check -NoBrowser -Port " + str(self.port) + "\n")
+        process, log, _ = self.start_ps(script)
+        self.assertEqual(process.wait(timeout=20), 0, self.read_log(log))
+        # Read raw ASCII, rather than repairing a lossy decode after the fact.
+        info = json.loads(log.read_bytes().decode("ascii"))
+        self.assertEqual(info["project"], str(self.project))
+        self.assertTrue(Path(info["python"]).is_file())
+        self.assertFalse(info["serverStarted"])
+        self.assertFalse(info["contentApproved"])
+        self.assertEqual(info["articles"], 1)
+        self.assertEqual(info["curatedCards"], 2)
+        self.assertFalse(self.marker.exists())
+        self.assert_no_listener()
+
     def test_invalid_port_is_rejected_without_server(self):
         process, log, _ = self.start_ps(args=["-File", str(LAUNCHER), "-Check", "-Port", "1023"])
         self.assertNotEqual(process.wait(timeout=20), 0)
